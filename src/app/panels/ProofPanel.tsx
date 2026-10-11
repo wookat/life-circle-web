@@ -1,4 +1,4 @@
-import { Alert, Table, Tag, Typography } from 'antd';
+import { Alert, Steps, Table, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { AnalysisResult, ChannelUsage } from '../../../shared/types.js';
 import { CHANNEL_LABEL } from '../../hud.js';
@@ -112,7 +112,20 @@ function LiveEvidence({ r }: { r: AnalysisResult }) {
 export function ProofPanel({ r }: { r: AnalysisResult | null }) {
   return (
     <>
-      <div className="empty-title" style={{ marginTop: 4 }}>本次运行证据</div>
+      <Alert
+        type="info" showIcon={false} style={{ marginBottom: 10 }}
+        message={<b>60 秒评委路径</b>}
+      />
+      <Steps
+        size="small" direction="vertical" current={r ? 3 : 0}
+        items={[
+          { title: '跑一次体检', description: '顶栏输入地址（或直接点「开始体检」用样例点），约 30 秒出热力面与报告' },
+          { title: '看人群公平性对比', description: '报告页展开「人群公平性对比」，同一坐标成人/老人/儿童并排评分' },
+          { title: '回本页核对证据', description: '下方本次运行步骤、实测批次、门禁与细则对照，均可点开复现' },
+        ]}
+      />
+
+      <div className="empty-title" style={{ marginTop: 14 }}>本次运行证据</div>
       {r
         ? <LiveEvidence r={r} />
         : <div className="log-line">先完成一次体检——这里会记录本次会话的真实调用步骤、耗时、通道与降级事件。</div>}
