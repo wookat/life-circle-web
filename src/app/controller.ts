@@ -203,8 +203,8 @@ function restoreProject(project: ProjectSnapshot) {
   state.persona = result.persona;
   state.minutes = result.minutes;
   (document.getElementById('addr-input') as HTMLInputElement).value = result.centerName;
-  (document.getElementById('persona') as HTMLSelectElement).value = result.persona;
-  (document.getElementById('minutes') as HTMLSelectElement).value = String(result.minutes);
+  // persona/minutes 已是 antd Select（React 受控）：经事件同步，不再写 DOM
+  window.dispatchEvent(new CustomEvent('lc:controls', { detail: { persona: result.persona, minutes: result.minutes } }));
   setResult(result);
   setWorkbenchState(project.workbench);
   drawResult(result);
@@ -445,8 +445,9 @@ async function analyze() {
   projects?.setBusy(true);
   const btn = document.getElementById('btn-analyze') as HTMLButtonElement;
   btn.disabled = true;
-  const controls = ['addr-input', 'btn-locate', 'btn-pick', 'persona', 'minutes'];
+  const controls = ['addr-input', 'btn-locate', 'btn-pick'];
   controls.forEach((id) => (document.getElementById(id) as HTMLInputElement).disabled = true);
+  window.dispatchEvent(new CustomEvent('lc:busy', { detail: true }));
 
   const persona = PERSONA_MAP[state.persona];
   const steps = ['中心定位', '路网采样算路', '时间场与等时环', '设施 POI 检索', '盲区识别与评分', '补点规划求解', '过街设施扫描'];
@@ -679,6 +680,7 @@ async function analyze() {
     projects?.setBusy(false);
     btn.disabled = false;
     controls.forEach((id) => (document.getElementById(id) as HTMLInputElement).disabled = false);
+    window.dispatchEvent(new CustomEvent('lc:busy', { detail: false }));
     updateChannelCard();
   }
 }

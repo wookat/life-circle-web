@@ -1,4 +1,4 @@
-import { Button, Input } from 'antd';
+import { Button, Input, Select } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { banner } from '../../hud.js';
 import { streetMounts, streetStart } from '../../panels.js';
@@ -46,38 +46,32 @@ export function StreetPanel() {
         />
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
           <label className="lbl">范围</label>
-          <select
-            id="street-scope" style={{ height: 30 }} value={scope}
-            onChange={(e) => {
-              const v = e.target.value;
+          <Select
+            id="street-scope" value={scope} style={{ width: 108 }}
+            options={[{ value: 'street', label: '街道体检' }, { value: 'district', label: '城区试点' }]}
+            onChange={(v) => {
               setScope(v);
               setRadius(v === 'district' ? '5000' : '2500');
               setMax(v === 'district' ? '16' : '10');
             }}
-          >
-            <option value="street">街道体检</option>
-            <option value="district">城区试点</option>
-          </select>
+          />
           <label className="lbl">采样半径</label>
-          <select id="street-persona" style={{ height: 30 }} title="批量体检人群" value={persona} onChange={(e) => setPersona(e.target.value)}>
-            <option value="adult">一般成人</option>
-            <option value="elderly">老年人</option>
-            <option value="child">儿童(陪同)</option>
-          </select>
-          <select id="street-radius" style={{ height: 30 }} value={radius} onChange={(e) => setRadius(e.target.value)}>
-            <option value="1500">1.5 km</option>
-            <option value="2500">2.5 km</option>
-            <option value="3000">3 km</option>
-            <option value="5000">5 km</option>
-            <option value="6500">6.5 km</option>
-          </select>
+          <Select
+            id="street-persona" value={persona} title="批量体检人群" style={{ width: 108 }}
+            options={[{ value: 'adult', label: '一般成人' }, { value: 'elderly', label: '老年人' }, { value: 'child', label: '儿童(陪同)' }]}
+            onChange={setPersona}
+          />
+          <Select
+            id="street-radius" value={radius} style={{ width: 88 }}
+            options={[{ value: '1500', label: '1.5 km' }, { value: '2500', label: '2.5 km' }, { value: '3000', label: '3 km' }, { value: '5000', label: '5 km' }, { value: '6500', label: '6.5 km' }]}
+            onChange={setRadius}
+          />
           <label className="lbl">采样点上限</label>
-          <select id="street-max" style={{ height: 30 }} value={max} onChange={(e) => setMax(e.target.value)}>
-            <option value="6">6</option>
-            <option value="10">10</option>
-            <option value="16">16</option>
-            <option value="24">24</option>
-          </select>
+          <Select
+            id="street-max" value={max} style={{ width: 64 }}
+            options={[{ value: '6', label: '6' }, { value: '10', label: '10' }, { value: '16', label: '16' }, { value: '24', label: '24' }]}
+            onChange={setMax}
+          />
           <Button
             id="btn-street-start" type="primary" style={{ marginLeft: 'auto' }} loading={busy}
             onClick={async () => {

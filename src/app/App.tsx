@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Checkbox, Input, Modal, Segmented, Tabs } from 'antd';
+import { Button, Checkbox, Input, Modal, Segmented, Select, Tabs } from 'antd';
 import { AimOutlined, EnvironmentOutlined, FileTextOutlined, QuestionCircleOutlined, SearchOutlined, ShareAltOutlined } from '@ant-design/icons';
 import { banner } from '../hud.js';
 import { render as renderPanel } from '../panels.js';
@@ -20,18 +20,32 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [mapType, setMapType] = useState<'2d' | 'satellite' | '3d'>('2d');
   const [activeTab, setActiveTab] = useState('report');
+  const [busy, setBusy] = useState(false);
+  const [persona, setPersona] = useState('adult');
+  const [minutes, setMinutes] = useState('15');
   const collapseRef = useRef<((side: 'left' | 'right') => void) | null>(null);
 
   useEffect(() => {
     const onTab = (e: Event) => setActiveTab((e as CustomEvent<string>).detail);
+    const onBusy = (e: Event) => setBusy((e as CustomEvent<boolean>).detail);
+    const onControls = (e: Event) => {
+      const d = (e as CustomEvent<{ persona: string; minutes: number }>).detail;
+      setPersona(d.persona); setMinutes(String(d.minutes));
+    };
     window.addEventListener('lc:tab', onTab);
+    window.addEventListener('lc:busy', onBusy);
+    window.addEventListener('lc:controls', onControls);
     collapseRef.current = ui.collapseInit();
     renderPanel();
     void init().catch((e) => {
       console.error(e);
       banner(`初始化失败：${(e as Error).message}`);
     });
-    return () => window.removeEventListener('lc:tab', onTab);
+    return () => {
+      window.removeEventListener('lc:tab', onTab);
+      window.removeEventListener('lc:busy', onBusy);
+      window.removeEventListener('lc:controls', onControls);
+    };
   }, []);
 
   return (
@@ -47,25 +61,25 @@ export default function App() {
           <span id="mode-badge" className="badge badge-warn" title="数据通道状态">检测中…</span>
         </div>
         <div className="controls">
-          <Button id="btn-sidebar" className="btn ghost only-narrow" aria-label="打开图层侧栏" onClick={() => ui.toggleDrawer('sidebar')}>图层</Button>
-          <Button id="btn-panel" className="btn ghost only-narrow" aria-label="打开体检报告" onClick={() => ui.toggleDrawer('panel')} icon={<FileTextOutlined />}>报告</Button>
+          <Button id="btn-sidebar" className="only-narrow" aria-label="打开图层侧栏" onClick={() => ui.toggleDrawer('sidebar')}>图层</Button>
+          <Button id="btn-panel" className="only-narrow" aria-label="打开体检报告" onClick={() => ui.toggleDrawer('panel')} icon={<FileTextOutlined />}>报告</Button>
           <Input id="addr-input" placeholder="输入地址 / 小区名，回车定位" onPressEnter={() => void ui.locate()} />
           <Button id="btn-locate" title="地理编码定位" icon={<SearchOutlined />} onClick={() => void ui.locate()}>定位</Button>
-          <Button id="btn-pick" className="btn ghost" title="在地图上点击选择中心点" icon={<AimOutlined />} onClick={() => ui.togglePick()}>图上选点</Button>
+          <Button id="btn-pick" title="在地图上点击选择中心点" icon={<AimOutlined />} onClick={() => ui.togglePick()}>图上选点</Button>
           <Button id="btn-help" title="使用说明" icon={<QuestionCircleOutlined />} onClick={() => setHelpOpen(true)}>使用说明</Button>
           <span className="divider" />
           <label className="lbl" htmlFor="persona">人群</label>
-          <select id="persona" defaultValue="adult" onChange={(e) => ui.setPersona(e.target.value as 'adult' | 'elderly' | 'child')}>
-            <option value="adult">一般成人</option>
-            <option value="elderly">老年人</option>
-            <option value="child">儿童(陪同)</option>
-          </select>
+          <Select
+            id="persona" value={persona} disabled={busy} style={{ width: 108 }}
+            options={[{ value: 'adult', label: '一般成人' }, { value: 'elderly', label: '老年人' }, { value: 'child', label: '儿童(陪同)' }]}
+            onChange={(v) => { setPersona(v); ui.setPersona(v as 'adult' | 'elderly' | 'child'); }}
+          />
           <label className="lbl" htmlFor="minutes">时长</label>
-          <select id="minutes" defaultValue="15" onChange={(e) => ui.setMinutes(e.target.value)}>
-            <option value="15">15 分钟</option>
-            <option value="10">10 分钟</option>
-            <option value="5">5 分钟</option>
-          </select>
+          <Select
+            id="minutes" value={minutes} disabled={busy} style={{ width: 96 }}
+            options={[{ value: '15', label: '15 分钟' }, { value: '10', label: '10 分钟' }, { value: '5', label: '5 分钟' }]}
+            onChange={(v) => { setMinutes(v); ui.setMinutes(v); }}
+          />
           <Button id="btn-analyze" type="primary" icon={<EnvironmentOutlined />} onClick={() => ui.runAnalyze()}>开始体检</Button>
         </div>
       </header>
@@ -77,18 +91,18 @@ export default function App() {
             <label htmlFor="project-name">当前项目名称</label>
             <Input id="project-name" maxLength={100} placeholder="完成体检后自动创建项目" autoComplete="off" />
             <div className="project-actions">
-              <Button id="project-save" className="btn ghost" disabled>保存</Button>
-              <Button id="project-save-as" className="btn ghost" disabled>另存为</Button>
+              <Button id="project-save" disabled>保存</Button>
+              <Button id="project-save-as" disabled>另存为</Button>
             </div>
             <label htmlFor="project-list">已保存项目</label>
             <select id="project-list" aria-label="已保存项目"><option value="">暂无本地项目</option></select>
             <div className="project-actions">
-              <Button id="project-open" className="btn ghost" disabled>打开</Button>
-              <Button id="project-delete" className="btn ghost" disabled>删除</Button>
+              <Button id="project-open" disabled>打开</Button>
+              <Button id="project-delete" disabled>删除</Button>
             </div>
             <div className="project-actions">
-              <Button id="project-import" className="btn ghost">导入项目</Button>
-              <Button id="project-export" className="btn ghost" disabled>导出项目</Button>
+              <Button id="project-import">导入项目</Button>
+              <Button id="project-export" disabled>导出项目</Button>
             </div>
             <input id="project-file" type="file" accept=".json,application/json" className="hidden" />
             <p id="project-status" className="project-status" role="status" aria-live="polite">完成体检后自动保存。</p>
@@ -156,10 +170,10 @@ export default function App() {
             <div id="panel-react" />
           </div>
           <div id="panel-footer" className="hidden">
-            <Button id="btn-print" className="btn ghost" onClick={() => ui.print()}>完整报告 / PDF</Button>
-            <Button id="btn-facility-csv" className="btn ghost" onClick={() => ui.facilityCsv()}>设施 CSV</Button>
-            <Button id="btn-json" className="btn ghost" onClick={() => ui.exportJson()}>导出 JSON</Button>
-            <Button id="btn-share" className="btn ghost" icon={<ShareAltOutlined />} onClick={() => void ui.share()}>只读分享</Button>
+            <Button id="btn-print" onClick={() => ui.print()}>完整报告 / PDF</Button>
+            <Button id="btn-facility-csv" onClick={() => ui.facilityCsv()}>设施 CSV</Button>
+            <Button id="btn-json" onClick={() => ui.exportJson()}>导出 JSON</Button>
+            <Button id="btn-share" icon={<ShareAltOutlined />} onClick={() => void ui.share()}>只读分享</Button>
           </div>
         </section>
       </main>

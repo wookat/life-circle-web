@@ -1,4 +1,4 @@
-import { Button, Input, Table, Tag } from 'antd';
+import { Button, Input, Select, Table, Tag } from 'antd';
 import { useState } from 'react';
 import {
   budgetExceeded, currentSites, planActions, sameRules, siteId, getPanelView,
@@ -67,9 +67,7 @@ export function PlanPanel({ r }: { r: AnalysisResult | null }) {
         locale={{ emptyText: '暂无自定义候选' }}
       />
       <div className="plan-edit-row" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '6px 0' }}>
-        <select id="pe-cat" className="input" value={cat} onChange={(e) => setCat(e.target.value)}>
-          {CORE.map((c) => <option key={c} value={c}>{catName(c)}</option>)}
-        </select>
+        <Select id="pe-cat" value={cat} style={{ width: 96 }} onChange={setCat} options={CORE.map((c) => ({ value: c, label: catName(c) }))} />
         <Input id="pe-lat" placeholder="纬度" style={{ width: 110 }} value={lat} onChange={(e) => setLat(e.target.value)} />
         <Input id="pe-lng" placeholder="经度" style={{ width: 110 }} value={lng} onChange={(e) => setLng(e.target.value)} />
         <Button id="pe-add" onClick={() => planActions.addCandidate(Number(lat), Number(lng), cat as (typeof CORE)[number])}>添加候选点</Button>

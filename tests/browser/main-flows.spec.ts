@@ -5,6 +5,13 @@ import { createProject, serializeProject, PROJECT_STORAGE_KEY, type WorkbenchSna
 import { analyzeGaps, buildChecklist, computeScore, type AnalysisResult } from '../../shared/index.js';
 
 const emptyWorkbench = (): WorkbenchSnapshot => ({ acceptedSites: [], rejectedSites: [] });
+// antd Select：id 落在内部 input 上；点击展开后从 portal 下拉里按选项文案选
+async function selectAntd(page: Page, id: string, label: string) {
+  const sel = page.locator(`#${id}`);
+  const wrap = sel.locator('xpath=ancestor-or-self::*[contains(concat(" ",normalize-space(@class)," ")," ant-select ")]').first();
+  await wrap.click();
+  await page.locator('.ant-select-dropdown .ant-select-item-option').getByText(label, { exact: true }).click();
+}
 async function importFixture(page: Page, result = comparisonFixture(), workbench = emptyWorkbench()) {
   const project = createProject(result, workbench, '完整流程验收');
   await page.locator('#project-file').setInputFiles({ name: 'project.json', mimeType: 'application/json', buffer: Buffer.from(serializeProject(project)) });
@@ -175,7 +182,8 @@ for (const [persona, speed, minutes] of [['adult', 80, 5], ['elderly', 52, 10], 
     await page.goto('/'); await importFixture(page);
     await page.locator('[data-tab="compare"]').click(); await page.locator('[data-scenario-save="A"]').click();
     const old = await current(page);
-    await page.locator('#persona').selectOption(persona); await page.locator('#minutes').selectOption(String(minutes));
+    await selectAntd(page, 'persona', { adult: '一般成人', elderly: '老年人', child: '儿童(陪同)' }[persona]);
+    await selectAntd(page, 'minutes', `${minutes} 分钟`);
     await page.locator('#ly-cross').uncheck(); await page.locator('#btn-analyze').click();
     await expect(page.locator('#project-export')).toBeDisabled(); await expect(page.locator('#persona')).toBeDisabled();
     await expect(page.locator('#btn-analyze')).toBeEnabled({ timeout: 20_000 });
@@ -380,7 +388,7 @@ test('规划编辑审查修复：禁建区拦截采纳、预算扣减与表单�
   // F4：禁建区覆盖全域后，自定义候选无法采纳
   await page.locator('#pe-zone').fill('100000');
   await page.locator('#pe-zone-add').click();
-  await page.locator('#pe-cat').selectOption('market');
+  await selectAntd(page, 'pe-cat', '菜市场');
   await page.locator('#pe-lat').fill('28.46');
   await page.locator('#pe-lng').fill('117.97');
   await page.locator('#pe-add').click();
@@ -483,7 +491,7 @@ test('样本补录：登记去重提示、并入下一次体检并在警告中�
 test('老年口径报告含老年友好解读与口径边界说明', async ({ page }) => {
   await page.goto('/');
   await importFixture(page);
-  await page.locator('#persona').selectOption('elderly');
+  await selectAntd(page, 'persona', '老年人');
   await page.locator('#btn-analyze').click();
   await expect(page.locator('#btn-analyze')).toBeEnabled({ timeout: 20_000 });
   await page.locator('[data-tab="report"]').click();

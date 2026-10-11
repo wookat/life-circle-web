@@ -16,8 +16,9 @@
   --ok-soft: #ebfbee;
   --bad: #c92a2a;
   --bad-soft: #fff5f5;
-  --radius: 12px;
-  --radius-s: 8px;
+  --radius: 14px;
+  --radius-s: 10px;
+  --topbar-bg: linear-gradient(90deg, #14263a 0%, #1d3a5f 55%, #1e4470 100%);
   --shadow-1: none;
   --shadow-2: none;
   --font: 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
@@ -56,15 +57,23 @@ input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px;
   justify-content: space-between;
   gap: 12px;
   padding: 0 16px;
-  background: var(--card);
-  border-bottom: 1px solid var(--line);
-  box-shadow: var(--shadow-1);
+  background: var(--topbar-bg);
+  border-bottom: none;
+  color: #e8eef5;
   z-index: 50;
   position: relative;
   scrollbar-width: none;
 }
 #topbar::-webkit-scrollbar { display: none; }
-.brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 15.5px; letter-spacing: 0.01em; white-space: nowrap; }
+.brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 15.5px; letter-spacing: 0.01em; white-space: nowrap; color: #f4f8fc; }
+#topbar .lbl { color: rgba(232, 238, 245, 0.72); }
+#topbar .divider { background: rgba(255, 255, 255, 0.16); }
+#topbar .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous) { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.24); color: #e8eef5; }
+#topbar .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.4); color: #fff; }
+#topbar .ant-input { border-color: rgba(255,255,255,0.22); }
+#topbar .ant-checkbox-wrapper, #topbar label { color: #e8eef5; }
+#topbar select { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.24); color: #e8eef5; }
+#topbar select option { color: var(--ink); }
 .logo-mark { display: block; flex: 0 0 auto; }
 
 .controls { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
@@ -121,7 +130,7 @@ select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47, 111, 
 }
 .card {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 13px 14px; box-shadow: var(--shadow-1); font-size: 13px;
+  padding: 14px 16px; box-shadow: var(--shadow-1); font-size: 13px;
 }
 .card h3 { margin: 0 0 9px; font-size: 12px; color: var(--ink-3); font-weight: 600; letter-spacing: 0.08em; }
 .card label { display: flex; align-items: center; gap: 7px; padding: 3.5px 0; cursor: pointer; border-radius: 4px; }
