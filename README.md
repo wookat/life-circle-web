@@ -105,13 +105,18 @@
 
 完整数据、人工核对过程与误差来源见 [真实对比测试报告](docs/COMPARISON_TEST.md)。
 
+### 在线演示
+
+**https://wookat.github.io/life-circle-web/** —— GitHub Pages 静态部署，打开即用：浏览器 AK 直连百度 Web API（真实地图与 POI），服务端不可用或配额异常时自动降级合成数据，演示永不中断。只读分享与街道批量等需服务端的功能在该部署上不可用（接口缺失时如实提示）。
+
 ### 演示视频
 
-[![圈点·核心功能演示](docs/data/screenshots/A-adult.png)](docs/video/圈点-核心功能演示.mp4)
+[![圈点·核心功能演示](docs/data/screenshots/A-adult.png)](docs/video/圈点-核心功能演示-v3.mp4)
 
-▶ [docs/video/圈点-核心功能演示.mp4](docs/video/圈点-核心功能演示.mp4)（52 秒，无声走查版：
-定位 → 48 向真实路网体检 → 热力面/盲区 → 规划建议采纳 → 对标清单 → 老年人视角对比。
-配音解说版按 [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) 分镜录制。）
+▶ [docs/video/圈点-核心功能演示-v3.mp4](docs/video/圈点-核心功能演示-v3.mp4)（2 分 36 秒，配音叙事版：
+章节卡 + 真实界面实录 + TTS 旁白，按「诊断 → 处方 → 验证」动线展开——
+定位体检、决策摘要、三人群公平性对比、补点收益、MAE 与 WorldPop 自证。
+分镜脚本见 [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)。）
 
 ## 这是什么
 

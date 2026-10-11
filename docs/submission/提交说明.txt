@@ -26,6 +26,10 @@
     cd life-circle-web && git checkout submission-2026-v2
 
 三、演示复现指引（评审方快速跑通）
+  方式零 · 在线演示（无需安装，已实测真实数据）：
+    https://wookat.github.io/life-circle-web/
+    → 打开即用：真实百度地图 + POI（浏览器 AK 直连），
+      服务端缺失时自动降级合成数据，演示永不中断。
   方式一 · Docker 一键（推荐，已实测）：
     git clone https://github.com/wookat/life-circle-web.git
     cd life-circle-web && docker compose up --build
