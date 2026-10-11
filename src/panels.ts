@@ -1269,11 +1269,68 @@ export async function streetStart(opts: {
       body: JSON.stringify(opts),
     });
     const data = await res.json();
-    if (data.status !== 0 || !data.jobId) { banner(`任务发起失败：${data.message ?? '未知错误'}`); return; }
+    if (data.status !== 0 || !data.jobId) {
+      banner(`服务端不可用，已切换演示合成样本（${data.message ?? '无百度服务'}）。`, 'info');
+      streetJobId = null;
+      streetLastSnapshot = syntheticStreetSnapshot(opts);
+      updateStreetStatus();
+      return;
+    }
     streetJobId = data.jobId;
     streetLastSnapshot = { status: 'running', done: 0, total: data.total ?? 0, current: '排队中…', communities: [], summary: null, persona: opts.persona };
     startPolling();
   } catch (e) {
-    banner(`任务发起失败：${(e as Error).message}`);
+    banner(`服务端不可用，已切换演示合成样本（${(e as Error).message}）。`, 'info');
+    streetJobId = null;
+    streetLastSnapshot = syntheticStreetSnapshot(opts);
+    updateStreetStatus();
   }
+}
+
+// ---------- 街道批量演示兜底：无百度服务时确定性合成样本，演示不中断 ----------
+
+function syntheticStreetSnapshot(opts: { address: string; radiusM: number; maxCommunities: number; persona: string }) {
+  const seed = [...opts.address].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const rnd = (i: number, k: number) => {
+    const x = Math.sin(seed * (i + 1) + k * 97) * 10000;
+    return x - Math.floor(x);
+  };
+  const base = ((window as unknown as { __LC_CENTER__?: LatLng }).__LC_CENTER__ ?? currentResult?.center) as LatLng | undefined ?? { lat: 28.4619, lng: 117.9717 };
+  const count = Math.max(4, Math.min(opts.maxCommunities, 10));
+  const namePool = ['阳光花园', '书香雅苑', '滨江华庭', '锦绣东城', '信江丽景', '水岸华府', '鼓楼新村', '世纪名都', '康乐苑', '文峰逸景', '天福家园', '紫阳新居'];
+  const cats = Object.keys(CATEGORY_MAP);
+  const communities: StreetCommunity[] = Array.from({ length: count }, (_, i) => {
+    const ang = rnd(i, 1) * Math.PI * 2;
+    const d = 0.004 + (rnd(i, 2) * Math.min(opts.radiusM, 2800) * 0.009) / 1000;
+    const score = Math.round((55 + rnd(i, 3) * 38) * 10) / 10;
+    const grade = score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 60 ? 'C' : score >= 40 ? 'D' : 'E';
+    return {
+      name: `${opts.address.replace(/[省市区县]/g, '').slice(0, 8) || '演示片区'}·${namePool[Math.floor(rnd(i, 5) * namePool.length)]}`,
+      center: { lat: base.lat + Math.sin(ang) * d, lng: base.lng + Math.cos(ang) * d },
+      score,
+      grade,
+      coverageShare: Math.round((0.55 + rnd(i, 4) * 0.43) * 100) / 100,
+      dominantMissing: rnd(i, 6) > 0.45 ? cats[Math.floor(rnd(i, 7) * cats.length)] : null,
+    };
+  });
+  const valid = communities.filter((c) => c.score >= 0);
+  const gradeDist: Record<string, number> = {};
+  for (const c of valid) gradeDist[c.grade] = (gradeDist[c.grade] ?? 0) + 1;
+  const sorted = [...valid].sort((a, b) => b.score - a.score);
+  const weakList = sorted
+    .filter((c) => c.score < 75 || (c.coverageShare ?? 1) < 0.8)
+    .map((c) => ({ name: c.name, score: c.score, coverageShare: c.coverageShare, dominantMissing: c.dominantMissing }));
+  return {
+    status: 'done', done: count, total: count, current: '演示合成数据（未配置 AK）',
+    communities, persona: opts.persona, error: undefined,
+    summary: {
+      avgScore: valid.length ? Math.round((valid.reduce((a, c) => a + c.score, 0) / valid.length) * 10) / 10 : 0,
+      gradeDist,
+      scoreGap: sorted.length > 1 ? Math.round((sorted[0].score - sorted[sorted.length - 1].score) * 10) / 10 : 0,
+      best: sorted[0] ? { name: sorted[0].name, score: sorted[0].score } : undefined,
+      worst: sorted.length > 1 ? { name: sorted[sorted.length - 1].name, score: sorted[sorted.length - 1].score } : undefined,
+      weakList,
+      streetGroups: [],
+    },
+  };
 }
