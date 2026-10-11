@@ -519,3 +519,20 @@ test('工程自证页：本次运行证据、实测批次、门禁清单与细�
   await expect(body).toContainText('空间插值');
   await expect(body).toContainText('docs/COMPARISON_TEST.md');
 });
+
+test('分享图卡：下载为 PNG 且文件名含点位与等级', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#btn-analyze').click();
+  await expect(page.locator('#btn-analyze')).toBeEnabled({ timeout: 60_000 });
+  const pending = page.waitForEvent('download');
+  await page.locator('#btn-share-card').click();
+  const dl = await pending;
+  expect(dl.suggestedFilename()).toMatch(/体检图卡.*[A-E]\d+\.png$/);
+  const buf = await dl.createReadStream().then(async (s) => {
+    const chunks: Buffer[] = [];
+    for await (const c of s) chunks.push(c as Buffer);
+    return Buffer.concat(chunks);
+  });
+  expect(buf.subarray(0, 4).toString('hex')).toBe('89504e47'); // PNG magic
+  expect(buf.length).toBeGreaterThan(50_000);
+});

@@ -42,6 +42,7 @@ import { worldPopCoverage } from '../../shared/worldpop.js';
 import { getCachedRoute, setCachedRoute, routeCacheKey } from '../routeCache.js';
 import type { ProjectSnapshot } from '../projects.js';
 import { openPrintableReport, downloadText, facilityCsv } from '../exports.js';
+import { downloadShareCard } from './shareCard.js';
 import { parseOpenHours } from '../openHours.js';
 import { addCorrection, listCorrections, undoCorrection, type CorrectionStatus } from '../corrections.js';
 import { supplementPois } from '../supplements.js';
@@ -395,6 +396,11 @@ export const ui = {
     } catch (err) {
       banner(`分享失败：${String((err as Error)?.message ?? err)}。演示模式/离线环境无分享服务。`);
     }
+  },
+  shareCard: () => {
+    if (!state.result) return;
+    try { downloadShareCard(state.result); banner('分享图卡已生成下载（含诊断结论与处方建议，可直接引用）', 'info', 6000); }
+    catch { banner('图卡生成失败，请重试或使用完整报告导出。', 'warn'); }
   },
   exportJson: () => {
     try { exportJson(); }

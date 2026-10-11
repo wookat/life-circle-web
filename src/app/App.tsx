@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, Checkbox, Input, Menu, Modal, Segmented, Select, Tabs } from 'antd';
-import { AimOutlined, EnvironmentOutlined, FileTextOutlined, LeftOutlined, QuestionCircleOutlined, RightOutlined, SearchOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { AimOutlined, EnvironmentOutlined, FileImageOutlined, FileTextOutlined, LeftOutlined, QuestionCircleOutlined, RightOutlined, SearchOutlined, ShareAltOutlined } from '@ant-design/icons';
 import { banner, getBannerView, getHudView, CHANNEL_LABEL, type BannerView, type HudView } from '../hud.js';
 import { CATEGORIES } from '../../shared/config.js';
 import { render as renderPanel } from '../panels.js';
@@ -219,6 +219,7 @@ export default function App() {
             <Button id="btn-facility-csv" onClick={() => ui.facilityCsv()}>设施 CSV</Button>
             <Button id="btn-json" onClick={() => ui.exportJson()}>导出 JSON</Button>
             <Button id="btn-share" icon={<ShareAltOutlined />} onClick={() => void ui.share()}>只读分享</Button>
+            <Button id="btn-share-card" icon={<FileImageOutlined />} onClick={() => ui.shareCard()}>分享图卡</Button>
           </div>
         </section>
       </main>
