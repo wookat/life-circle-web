@@ -3,6 +3,7 @@ import { applySiteCoverage, planFacilitiesFromCoverage } from '../shared/planner
 import { localDistM } from '../shared/geo.js';
 import type { AnalysisResult, GapPatch, LatLng, PlanSite } from '../shared/types.js';
 import { banner, CHANNEL_LABEL } from './hud.js';
+import { API_BASE } from './api.js';
 import { map } from './appRuntime.js';
 import { readAllProjects, type WorkbenchSnapshot } from './projects.js';
 import { APPLICATION_VERSION, ALGORITHM_VERSION, RULE_VERSION, ruleFingerprint } from '../shared/provenance.js';
@@ -159,7 +160,7 @@ export function getStreetView(): StreetView {
 
 async function refreshJobList() {
   try {
-    const res = await fetch('/api/batch/jobs');
+    const res = await fetch(`${API_BASE}api/batch/jobs`);
     const data = await res.json();
     const jobs: any[] = data.jobs ?? [];
     streetJobs = jobs.slice(0, 3).map((j) => ({
@@ -174,7 +175,7 @@ async function refreshJobList() {
 /** №13 调用预算面板：本地进程计数（非平台账户余额），预算与命中一目了然 */
 async function refreshUsageLine() {
   try {
-    const res = await fetch('/api/baidu/usage');
+    const res = await fetch(`${API_BASE}api/baidu/usage`);
     const data = await res.json();
     const u = data.usage;
     if (!u) return;
@@ -189,7 +190,7 @@ function startPolling() {
   streetPollTimer = setInterval(async () => {
     if (!streetJobId) return;
     try {
-      const res = await fetch(`/api/batch/status/${streetJobId}`);
+      const res = await fetch(`${API_BASE}api/batch/status/${streetJobId}`);
       const data = await res.json();
       if (data.status !== 0) return;
       void refreshUsageLine();
@@ -234,7 +235,7 @@ export const streetActions = {
   },
   async resumeJob(id: string) {
     try {
-      const res = await fetch('/api/batch/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: id, mode: 'remaining' }) });
+      const res = await fetch(`${API_BASE}api/batch/resume`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: id, mode: 'remaining' }) });
       const data = await res.json();
       if (data.status !== 0) { banner(data.message ?? '续跑失败'); return; }
       streetJobId = data.jobId;
@@ -244,7 +245,7 @@ export const streetActions = {
   },
   async cancel() {
     if (!streetJobId) return;
-    try { await fetch(`/api/batch/cancel/${streetJobId}`, { method: 'POST' }); }
+    try { await fetch(`${API_BASE}api/batch/cancel/${streetJobId}`, { method: 'POST' }); }
     catch { /* 轮询会反映最终状态 */ }
   },
   exportWeakCsv() {
@@ -466,7 +467,7 @@ export async function streetStart(opts: {
   address: string; scope: string; radiusM: number; maxCommunities: number; persona: string;
 }): Promise<void> {
   try {
-    const res = await fetch('/api/batch/street', {
+    const res = await fetch(`${API_BASE}api/batch/street`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(opts),

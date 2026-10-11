@@ -26,7 +26,7 @@ import {
   type PersonaId,
   type RouteProbe
 } from '../../shared/index.js';
-import { ClientGateway, GatewayChain, MockGateway, ServerGateway, makeProbeDestinations, type Gateway, type WalkingStepGeo } from '../api.js';
+import { API_BASE, ClientGateway, GatewayChain, MockGateway, ServerGateway, makeProbeDestinations, type Gateway, type WalkingStepGeo } from '../api.js';
 import { fieldToDataUrl } from '../fieldRender.js';
 import { Hud, banner, CHANNEL_LABEL } from '../hud.js';
 import type { LayerKey } from '../map.js';
@@ -81,7 +81,7 @@ declare global {
 export async function init() {
   let cfg = { browserAk: '', hasServerAk: false, mock: true };
   try {
-    const res = await fetch('/api/config');
+    const res = await fetch(`${API_BASE}api/config`);
     if (res.ok) cfg = await res.json();
   } catch {
     /* 无后端时直接进入演示模式 */
@@ -237,7 +237,7 @@ function bindGlobal() {
         return;
       }
       banner('正在查询商户申报的营业时间…', 'info', 6000);
-      fetch(`/api/baidu/place/v2/detail?uid=${encodeURIComponent(uid)}`)
+      fetch(`${API_BASE}api/baidu/place/v2/detail?uid=${encodeURIComponent(uid)}`)
         .then((res) => res.json())
         .then((data) => {
           const raw: string | undefined = data?.result?.detail_info?.open_time ?? data?.result?.open_time;
@@ -385,10 +385,10 @@ export const ui = {
     if (!state.result) return;
     banner('正在创建只读分享…', 'info', 6000);
     try {
-      const res = await fetch('/api/baidu/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(slimShareReport(state.result)) });
+      const res = await fetch(`${API_BASE}api/baidu/share`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(slimShareReport(state.result)) });
       const data = await res.json();
       if (data.status !== 0) { banner(`分享失败：${data.message ?? '未知错误'}`); return; }
-      const url = `${location.origin}/api/baidu/share/${data.id}`;
+      const url = `${location.origin}${API_BASE}api/baidu/share/${data.id}`;
       try { await navigator.clipboard.writeText(url); banner(`只读分享已创建并复制链接：${url}（固定版本快照，无交互；存储上限 100 份 FIFO）`, 'info', 12000); }
       catch { banner(`只读分享已创建：${url}（固定版本快照，无交互）`, 'info', 12000); }
     } catch (err) {
@@ -534,7 +534,7 @@ async function analyze() {
     switchTab('report');
     projects?.analysisCompleted();
     hud.note(`完成：总分 ${result.score.total}（${result.score.grade}），发现 ${result.gap.patches.length} 个灰色区域，给出 ${result.planSites.length} 条补点建议`);
-    void fetch('/api/baidu/usage').then((res) => res.json()).then((data) => {
+    void fetch(`${API_BASE}api/baidu/usage`).then((res) => res.json()).then((data) => {
       const u = data?.usage;
       if (u) hud.note(`今日上游请求 ${u.requests.total}${u.dailyBudget > 0 ? `/${u.dailyBudget}` : ''} · 缓存命中 ${u.cacheHits} · 本地进程计数，非平台账户余额${u.overBudget ? ' · 已触顶暂停' : ''}`);
     }).catch(() => { /* 演示模式无此端点 */ });
@@ -734,7 +734,7 @@ async function computeReport(chain: GatewayChain, opts: ComputeOpts): Promise<An
     );
     if (ring && ring.length >= 3) {
       try {
-        const r = await fetch('/api/popcoverage', {
+        const r = await fetch(`${API_BASE}api/popcoverage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ center, ring, radiusM: persona.speed * minutes })

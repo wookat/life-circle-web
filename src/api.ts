@@ -31,6 +31,9 @@ export interface PoiSearchParams {
   page?: number;
 }
 
+/** Prefijo de las llamadas /api: respeta el base path del build (deploy bajo subruta, p.ej. Pages estáticas). */
+export const API_BASE: string = import.meta.env.BASE_URL;
+
 export interface Gateway {
   readonly name: ChannelName;
   geocode(address: string): Promise<GeocodeResult>;
@@ -145,7 +148,7 @@ export class ServerGateway implements Gateway {
       const query = new URLSearchParams({ query: params.query,
         location: `${params.location.lat},${params.location.lng}`,
         radius: String(params.radiusM), page_num: String(page) });
-      const response = await fetch(`/api/baidu/place/v2/search?${query}`);
+      const response = await fetch(`${API_BASE}api/baidu/place/v2/search?${query}`);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       if (data.status !== 0) throw new Error(`place status ${data.status}`);
@@ -204,7 +207,7 @@ export class ServerGateway implements Gateway {
 
   private async get(path: string, params: Record<string, string>): Promise<any> {
     const qs = new URLSearchParams(params);
-    const res = await fetch(`${path}?${qs}`);
+    const res = await fetch(`${API_BASE}${path.replace(/^\//, '')}?${qs}`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
   }
