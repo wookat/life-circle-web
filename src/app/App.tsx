@@ -50,6 +50,14 @@ export default function App() {
     window.addEventListener('lc:controls', onControls);
     window.addEventListener('lc:projects', onProjects);
     collapseRef.current = ui.collapseInit();
+    // 抽屉(#sidebar/#panel)top 跟随真实顶栏高度：窄屏顶栏折行变高后抽屉仍从栏下开始
+    const topbar = document.getElementById('topbar');
+    const setTopbarH = () => {
+      if (topbar) document.documentElement.style.setProperty('--topbar-actual-h', `${topbar.offsetHeight}px`);
+    };
+    setTopbarH();
+    const ro = topbar ? new ResizeObserver(setTopbarH) : null;
+    if (topbar && ro) ro.observe(topbar);
     renderPanel();
     void init().then(() => setProj(ui.projects()?.getView() ?? null)).catch((e) => {
       console.error(e);
@@ -234,7 +242,7 @@ export default function App() {
 
       <Modal open={helpOpen} onCancel={() => setHelpOpen(false)} footer={null} title="使用说明">
         <ol className="modal-body" style={{ paddingLeft: 20, lineHeight: 2 }}>
-          <li>输入地址定位，或直接在地图上<b>点击/右键</b>选择中心点；</li>
+          <li>输入地址定位，或直接在地图上<b>点击/右键</b>选择中心点（触屏设备可点顶栏「图上选点」后点地图）；</li>
           <li>选择人群（老年人速度更慢，可达范围更小）；</li>
           <li>点击「开始体检」，系统基于真实路网计算步行时间场；</li>
           <li>查看体检报告、对标清单与补点规划建议；</li>

@@ -371,7 +371,7 @@ body.sb-off #sidebar, body.panel-off #panel { display: none; }
   .controls { gap: 6px; }
   #addr-input { width: 150px; flex: 0 0 auto; }
   #sidebar, #panel {
-    position: fixed; top: var(--topbar-h); bottom: 0; z-index: 60;
+    position: fixed; top: var(--topbar-actual-h, var(--topbar-h)); bottom: 0; z-index: 60;
     background: var(--bg); box-shadow: none;
     transition: transform 0.22s cubic-bezier(0.2, 0.7, 0.3, 1);
   }
@@ -383,12 +383,20 @@ body.sb-off #sidebar, body.panel-off #panel { display: none; }
   .edge-toggle, #map-type-switch { display: none !important; }
 }
 @media (max-width: 720px) {
-  #topbar { padding: 0 10px; gap: 8px; }
+  /* 窄屏顶栏：纵向三行排布——徽标+抽屉钮+地址输入 / 图标钮+人群时长 / 全宽体检按钮 */
+  #topbar { height: auto; flex-direction: column; align-items: stretch; padding: 8px 10px; gap: 6px; }
+  #topbar .controls { flex-wrap: wrap; gap: 6px; }
+  #topbar .controls .divider { display: none; }
+  #topbar .lbl { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .brand span.app-name { display: none; }
+  #addr-input { flex: 1 1 150px; min-width: 120px; width: auto; height: 36px; }
+  #btn-locate, #btn-pick, #btn-help { font-size: 0; }
+  #btn-locate .anticon, #btn-pick .anticon, #btn-help .anticon { font-size: 15px; }
+  #btn-analyze { flex: 1; }
+  #banner { top: auto; bottom: 12px; } /* 顶栏变高后横幅改底部 toast，不压顶栏 */
   /* 窄屏页签：8 个页签全部可见，不收进 antd「···」溢出菜单 */
   #panel-tabs .ant-tabs-tab { padding: 8px 0; }
   #panel-tabs .ant-tabs-tab + .ant-tabs-tab { margin-left: 14px; }
-  .brand span.app-name { display: none; }
-  #addr-input { width: 130px; }
   .hud-box { width: min(340px, 92vw); }
 }
 
