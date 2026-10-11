@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, Checkbox, Input, Modal, Segmented, Select, Tabs } from 'antd';
 import { AimOutlined, EnvironmentOutlined, FileTextOutlined, QuestionCircleOutlined, SearchOutlined, ShareAltOutlined } from '@ant-design/icons';
-import { banner } from '../hud.js';
+import { banner, getBannerView, getHudView, CHANNEL_LABEL, type BannerView, type HudView } from '../hud.js';
+import { CATEGORIES } from '../../shared/config.js';
 import { render as renderPanel } from '../panels.js';
 import type { ProjectView } from '../projectUi.js';
 import { PanelBody } from './PanelBody.js';
@@ -25,6 +26,9 @@ export default function App() {
   const [persona, setPersona] = useState('adult');
   const [minutes, setMinutes] = useState('15');
   const [proj, setProj] = useState<ProjectView | null>(null);
+  const [hudView, setHudView] = useState<HudView>(getHudView());
+  const [bannerView, setBannerView] = useState<BannerView>(getBannerView());
+  const [channels, setChannels] = useState<{ label: string; open: boolean; fails: number }[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
   const collapseRef = useRef<((side: 'left' | 'right') => void) | null>(null);
 
@@ -37,6 +41,10 @@ export default function App() {
     };
     window.addEventListener('lc:tab', onTab);
     const onProjects = () => setProj(ui.projects()?.getView() ?? null);
+    const onHud = () => { setHudView(getHudView()); setBannerView(getBannerView()); };
+    const onChannel = () => setChannels(ui.channelItems());
+    window.addEventListener('lc:hud', onHud);
+    window.addEventListener('lc:channel', onChannel);
     window.addEventListener('lc:busy', onBusy);
     window.addEventListener('lc:controls', onControls);
     window.addEventListener('lc:projects', onProjects);
@@ -48,6 +56,8 @@ export default function App() {
     });
     return () => {
       window.removeEventListener('lc:tab', onTab);
+      window.removeEventListener('lc:hud', onHud);
+      window.removeEventListener('lc:channel', onChannel);
       window.removeEventListener('lc:busy', onBusy);
       window.removeEventListener('lc:controls', onControls);
       window.removeEventListener('lc:projects', onProjects);
@@ -139,7 +149,11 @@ export default function App() {
               <div className="heat-ticks"><i>0′</i><i>5′</i><i>10′</i><i>15′</i><i>20′+</i></div>
               <p className="legend-note">步行时间热力面：颜色越深可达性越差</p>
             </div>
-            <div id="legend-pois" className="poi-legend"></div>
+            <div id="legend-pois" className="poi-legend">
+              {CATEGORIES.map((c) => (
+                <div key={c.id} className={`item${c.core ? ' core' : ''}`}><span className="dot" style={{ background: c.color }} />{c.name}</div>
+              ))}
+            </div>
             <div className="legend-lines">
               <div className="ll-item"><span className="ll-line" style={{ borderTop: '2px dashed #7cb342' }}></span>步行 5 分钟可达边界</div>
               <div className="ll-item"><span className="ll-line" style={{ borderTop: '2px dashed #fb8c00' }}></span>步行 10 分钟可达边界</div>
@@ -151,7 +165,16 @@ export default function App() {
           </section>
           <section className="card" id="channel-card">
             <h3>数据通道</h3>
-            <div id="channel-list" className="channel-list">待分析…</div>
+            <div id="channel-list" className="channel-list">
+              {channels.length === 0
+                ? '待分析…'
+                : channels.map((c) => (
+                  <div className="channel-item" key={c.label}>
+                    <b>{c.label}</b>
+                    <span><span style={{ color: c.open ? 'var(--bad)' : 'var(--ok)' }}>{c.open ? '熔断中' : '就绪'}</span> · 失败 {c.fails}</span>
+                  </div>
+                ))}
+            </div>
           </section>
         </aside>
 
@@ -193,15 +216,22 @@ export default function App() {
         </section>
       </main>
 
-      <div id="hud" className="hidden">
+      <div id="hud" className={hudView.visible ? '' : 'hidden'}>
         <div className="hud-box">
-          <div className="hud-title" id="hud-title">分析中…</div>
-          <ul id="hud-steps"></ul>
-          <div className="hud-note" id="hud-note"></div>
+          <div className="hud-title" id="hud-title"><span className="spinner" aria-hidden="true" />{hudView.title || '分析中…'}</div>
+          <ul id="hud-steps">
+            {hudView.steps.map((s, i) => (
+              <li key={i} className={s.status}>
+                <span>{s.status === 'done' ? '✓' : s.status === 'doing' ? '▸' : s.status === 'fail' ? '×' : '·'} {i + 1}. {s.name}</span>
+                <span>{s.channel && <span className="st-channel">{CHANNEL_LABEL[s.channel]}</span>}{s.ms != null && <span className="st-ms">{s.ms}ms</span>}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="hud-note" id="hud-note">{hudView.note}</div>
         </div>
       </div>
 
-      <div id="banner" className="hidden"></div>
+      <div id="banner" className={bannerView.visible ? '' : 'hidden'}>{bannerView.text}</div>
 
       <Modal open={helpOpen} onCancel={() => setHelpOpen(false)} footer={null} title="使用说明">
         <ol className="modal-body" style={{ paddingLeft: 20, lineHeight: 2 }}>

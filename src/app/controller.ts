@@ -120,7 +120,6 @@ export async function init() {
     document.getElementById('map-placeholder')?.classList.remove('hidden');
   }
 
-  buildLegend();
   bindGlobal();
   updateChannelCard();
   projects = setupProjects({
@@ -211,14 +210,6 @@ function restoreProject(project: ProjectSnapshot) {
   switchTab('report');
 }
 
-function buildLegend() {
-  const el = document.getElementById('legend-pois')!;
-  el.innerHTML = CATEGORIES.map(
-    (c) =>
-      `<div class="item${c.core ? ' core' : ''}"><span class="dot" style="background:${c.color}"></span>${c.name}</div>`
-  ).join('');
-}
-
 function bindGlobal() {
   // POI 弹窗动作统一入口：BMapGL 弹窗容器会 stopPropagation，body 委托收不到；
   // 弹窗内按钮改走 inline onclick → window.__lcPoiAct；弹窗外元素仍走此委托
@@ -277,6 +268,7 @@ function bindGlobal() {
 // ---------- JSX 绑定层（React props 调用） ----------
 export const ui = {
   projects: () => projects,
+  channelItems: () => channelItems,
   locate: async () => {
     const addr = (document.getElementById('addr-input') as HTMLInputElement).value.trim();
     if (!addr || !state.chain) return;
@@ -420,19 +412,13 @@ function closeDrawers() {
   document.body.classList.remove('sidebar-open', 'panel-open');
 }
 
+let channelItems: { label: string; open: boolean; fails: number }[] = [];
+
 function updateChannelCard() {
-  const el = document.getElementById('channel-list');
   const chain = state.chain;
-  if (!el || !chain) return;
-  el.innerHTML = chain
-    .channels()
-    .map(
-      (c) =>
-        `<div class="channel-item"><b>${CHANNEL_LABEL[c.name]}</b><span>${
-          c.open ? '<span style="color:var(--bad)">熔断中</span>' : '<span style="color:var(--ok)">就绪</span>'
-        } · 失败 ${c.fails}</span></div>`
-    )
-    .join('');
+  if (!chain) return;
+  channelItems = chain.channels().map((c) => ({ label: CHANNEL_LABEL[c.name], open: c.open, fails: c.fails }));
+  window.dispatchEvent(new CustomEvent('lc:channel'));
 }
 
 // ---------- 分析主流程 ----------
