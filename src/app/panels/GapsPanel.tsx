@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, Button, Input, Statistic, Table, Tag } from 'antd';
 import type { AnalysisResult, GapPatch } from '../../../shared/types.js';
 import { CATEGORY_MAP } from '../../../shared/config.js';
@@ -13,6 +13,7 @@ function refreshPanel() {
 export function GapsPanel({ r }: { r: AnalysisResult | null }) {
   const [supp, setSupp] = useState({ name: '', lat: '', lng: '', hh: '', src: '' });
   const [suppJson, setSuppJson] = useState('');
+  const bndFileRef = useRef<HTMLInputElement>(null);
 
   if (!r) return <div className="empty-tip">先完成一次体检</div>;
 
@@ -147,8 +148,9 @@ export function GapsPanel({ r }: { r: AnalysisResult | null }) {
       <Alert className="rpt-summary" type="info" showIcon={false}
         message="导入 GeoJSON（Polygon/MultiPolygon）后，仅边界内的采样与设施参与统计，范围外不参与；边界来自用户导入，准确性以数据源为准。下一次体检生效。" />
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', margin: '6px 0', alignItems: 'center' }}>
-        <input type="file" id="bnd-file" accept=".json,.geojson" style={{ fontSize: 12 }}
+        <input type="file" id="bnd-file" accept=".json,.geojson" className="hidden" ref={bndFileRef}
           onChange={(e) => { void onBoundaryFile(e.target.files?.[0]); e.target.value = ''; }} />
+        <Button size="small" onClick={() => bndFileRef.current?.click()}>导入边界文件</Button>
         <Button id="bnd-clear" size="small" onClick={() => { clearBoundary(); banner('边界已清除，恢复默认分析范围。', 'info'); refreshPanel(); }}>清除边界</Button>
         <span id="bnd-status" className="rpt-sub">{boundary ? `当前：${boundary.name}（${boundary.vertexCount} 顶点）` : '未设置边界（默认以分析中心半径为范围）'}</span>
       </div>
