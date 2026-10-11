@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getPanelView } from '../panels.js';
 import { ReportPanel } from './panels/ReportPanel.js';
+import { ChecklistPanel } from './panels/ChecklistPanel.js';
+import { GapsPanel } from './panels/GapsPanel.js';
 
 /** 已迁移到 React+AntD 的页签；panels.render() 对其跳过 innerHTML。 */
-const REACT_TABS = new Set(['report']);
+const REACT_TABS = new Set(['report', 'checklist', 'gaps']);
 
 type PanelView = ReturnType<typeof getPanelView>;
 
@@ -25,6 +27,8 @@ export function PanelBody() {
   return createPortal(
     <>
       {view.tab === 'report' && <ReportPanel r={view.result} correctionsCount={view.correctionsCount} />}
+      {view.tab === 'checklist' && <ChecklistPanel r={view.result} />}
+      {view.tab === 'gaps' && <GapsPanel r={view.result} />}
     </>,
     host
   );
