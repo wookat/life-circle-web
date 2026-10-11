@@ -30,6 +30,8 @@
     https://wookat.github.io/life-circle-web/
     → 打开即用：真实百度地图 + POI（浏览器 AK 直连），
       服务端缺失时自动降级合成数据，演示永不中断。
+      页签「自证」：本次运行调用证据 + 实测跑批数字 +
+      门禁清单与评审细则对照，评审可逐条点开核对。
   方式一 · Docker 一键（推荐，已实测）：
     git clone https://github.com/wookat/life-circle-web.git
     cd life-circle-web && docker compose up --build
