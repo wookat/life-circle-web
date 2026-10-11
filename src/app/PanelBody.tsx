@@ -6,9 +6,11 @@ import { ChecklistPanel } from './panels/ChecklistPanel.js';
 import { GapsPanel } from './panels/GapsPanel.js';
 import { PlanPanel } from './panels/PlanPanel.js';
 import { ComparePanel } from './panels/ComparePanel.js';
+import { StreetPanel } from './panels/StreetPanel.js';
+import { LogPanel } from './panels/LogPanel.js';
 
 /** 已迁移到 React+AntD 的页签；panels.render() 对其跳过 innerHTML。 */
-const REACT_TABS = new Set(['report', 'checklist', 'gaps', 'plan', 'compare']);
+const REACT_TABS = new Set(['report', 'checklist', 'gaps', 'plan', 'compare', 'street', 'log']);
 
 type PanelView = ReturnType<typeof getPanelView>;
 
@@ -33,6 +35,8 @@ export function PanelBody() {
       {view.tab === 'gaps' && <GapsPanel r={view.result} />}
       {view.tab === 'plan' && <PlanPanel r={view.result} />}
       {view.tab === 'compare' && <ComparePanel r={view.result} />}
+      {view.tab === 'street' && <StreetPanel />}
+      {view.tab === 'log' && <LogPanel r={view.result} />}
     </>,
     host
   );
