@@ -133,6 +133,14 @@ function result(v: unknown): AnalysisResult {
   if (r.accuracy !== undefined) {
     const a = obj(r.accuracy, 'accuracy'); out.accuracy = { samples: integer(a.samples, 'accuracy.samples'), maeMinutes: num(a.maeMinutes, 'accuracy.maeMinutes'), maePercent: num(a.maePercent, 'accuracy.maePercent'), worstPercent: num(a.worstPercent, 'accuracy.worstPercent') };
   }
+  if (r.popCoverage !== undefined) {
+    if (r.popCoverage === null) { out.popCoverage = null; }
+    else {
+      const c = obj(r.popCoverage, 'popCoverage');
+      if (c.source !== 'worldpop-2020') bad('popCoverage.source 不识别');
+      out.popCoverage = { share: num(c.share, 'popCoverage.share', 0, 1), popIn: num(c.popIn, 'popCoverage.popIn'), popEval: num(c.popEval, 'popCoverage.popEval'), radiusM: num(c.radiusM, 'popCoverage.radiusM'), source: 'worldpop-2020' };
+    }
+  }
   if (r.incompleteCategories !== undefined) out.incompleteCategories = cats(r.incompleteCategories, 'incompleteCategories');
   if (r.assessmentUnavailableCategories !== undefined) out.assessmentUnavailableCategories = cats(r.assessmentUnavailableCategories, 'assessmentUnavailableCategories');
   if (r.poiSearch !== undefined) out.poiSearch = arr(r.poiSearch, 'poiSearch', (x, p) => {
