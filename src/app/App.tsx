@@ -199,13 +199,11 @@ export default function App() {
         </div>
 
         <section id="panel">
-          <PanelBody />
           <nav id="panel-tabs">
             <Tabs activeKey={activeTab} size="small" onChange={(k) => { setActiveTab(k); ui.selectTab(k); }} items={TABS} />
           </nav>
           <div id="panel-body">
-            <div id="panel-legacy"><div className="empty-tip">选择中心点后点击「开始体检」</div></div>
-            <div id="panel-react" />
+            <PanelBody />
           </div>
           <div id="panel-footer" className="hidden">
             <Button id="btn-print" onClick={() => ui.print()}>完整报告 / PDF</Button>

@@ -98,7 +98,7 @@ export function getWorkbenchState() {
 }
 
 // ---- React 接管桥 ----
-// 全部页签已由 React 渲染；React 侧读 getPanelView() 渲染进 #panel-react。
+// 全部页签由 React 渲染；PanelBody 读 getPanelView() 直挂在 #panel-body。
 export function getPanelView() {
   return {
     tab: currentTab,
@@ -112,18 +112,13 @@ export function getPanelView() {
 
 export function switchTab(tab: string) {
   currentTab = tab;
-  document.querySelectorAll('#panel-tabs button').forEach((b) => {
-    b.classList.toggle('on', (b as HTMLElement).dataset.tab === tab);
-  });
   window.dispatchEvent(new CustomEvent('lc:tab', { detail: tab }));
   render();
 }
 
 export function render() {
-  // 全部页签已由 React 渲染；本函数只保留壳层职责：
-  // 清空 legacy 容器、控制导出按钮组可见性、保留 [data-fly] 飞行定位委托、广播刷新事件
-  const legacy = document.getElementById('panel-legacy');
-  if (legacy) legacy.innerHTML = '';
+  // 全部页签由 React 渲染；本函数只保留壳层职责：
+  // 控制导出按钮组可见性、保留 [data-fly] 飞行定位委托、广播刷新事件
   const body = document.getElementById('panel-body')!;
   const footer = document.getElementById('panel-footer');
   if (footer) footer.classList.toggle('hidden', !['report', 'compare'].includes(currentTab) || !currentResult);
