@@ -1,6 +1,9 @@
+import { createElement } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { CATEGORY_MAP } from '../shared/config.js';
 import { simplifyLine } from '../shared/timefield.js';
 import type { CrossingSegment, GapPatch, LatLng, PlanSite, Poi } from '../shared/types.js';
+import { PoiPop } from './app/PoiPop.js';
 
 /**
  * 地图视图封装：所有图层 no-op 安全（演示模式下底图不可用时静默跳过）。
@@ -27,6 +30,7 @@ export class MapView {
   private visible: Record<LayerKey, boolean> = { heat: true, rings: true, poi: true, gap: true, plan: true, cross: true, route: true, batch: true, boundary: true };
   private data: Record<string, any> = {};
   private centerMarker: any = null;
+  private popRoot: Root | null = null;
 
   async init(
     browserAk: string,
@@ -44,6 +48,9 @@ export class MapView {
       this.map.addControl(new BMapGL.ScaleControl());
       this.map.addControl(new BMapGL.NavigationControl3D());
       this.ready = true;
+      if (import.meta.env.DEV) {
+        (window as unknown as Record<string, unknown>).__lcDebugPoiPop = (p: Poi, cat: string) => this.openPoiPop(p, cat);
+      }
       if (onPick) {
         this.map.addEventListener('click', (e: any) => {
           if (e.latlng) onPick({ lat: e.latlng.lat, lng: e.latlng.lng });
@@ -175,10 +182,28 @@ export class MapView {
     this.renderLayer('cross');
   }
 
-  /** 路线核验连线：直线示意，距离与耗时以真实路网计算的报告文本为准；null 清除 */
-  setRoute(points: [LatLng, LatLng] | null) {
-    this.data.route = points;
+  /** 路线核验连线：真实步行路径折线（walkingGeo 逐段几何拼接）；null 清除 */
+  setRoute(path: LatLng[] | null) {
+    this.data.route = path;
     this.renderLayer('route');
+  }
+
+  /** POI 详情弹窗：React+antd 渲染进 InfoWindow 宿主节点，与全局组件体系统一 */
+  private openPoiPop(p: Poi, categoryName: string) {
+    this.popRoot?.unmount();
+    this.popRoot = null;
+    const host = document.createElement('div');
+    this.popRoot = createRoot(host);
+    this.popRoot.render(createElement(PoiPop, {
+      name: p.name,
+      category: categoryName,
+      address: p.address ?? '',
+      uid: p.uid,
+      act: (ds) => (window as unknown as { __lcPoiAct?: (d: Record<string, string>) => void }).__lcPoiAct?.(ds)
+    }));
+    const info = new BMapGL.InfoWindow(host, { width: 320 });
+    info.addEventListener?.('close', () => { this.popRoot?.unmount(); this.popRoot = null; });
+    this.map.openInfoWindow(info, new BMapGL.Point(p.lng, p.lat));
   }
 
   toggleLayer(key: LayerKey, on: boolean) {
@@ -248,12 +273,10 @@ export class MapView {
     }
 
     if (key === 'route') {
-      const pts = this.data.route as [LatLng, LatLng] | null;
-      if (pts && pts.length === 2) {
-        const pl = new BMapGL.Polyline([
-          new BMapGL.Point(pts[0].lng, pts[0].lat),
-          new BMapGL.Point(pts[1].lng, pts[1].lat)
-        ], { strokeColor: '#2f6fed', strokeWeight: 3, strokeOpacity: 0.85, strokeStyle: 'dashed' });
+      const path = this.data.route as LatLng[] | null;
+      if (path && path.length >= 2) {
+        const pts = path.map((p) => new BMapGL.Point(p.lng, p.lat));
+        const pl = new BMapGL.Polyline(pts, { strokeColor: '#2f6fed', strokeWeight: 4, strokeOpacity: 0.9, strokeStyle: 'solid' });
         map.addOverlay(pl);
         this.overlays.route.push(pl);
       }
@@ -277,20 +300,7 @@ export class MapView {
           icon: iconFor(def.color, def.name.slice(0, 1))
         });
         marker.addEventListener('click', () => {
-          const info = new BMapGL.InfoWindow(
-            `<div class="poi-pop" style="font-size:13px;min-width:200px"><b>${escapeHtml(p.name)}</b><br/><span style="color:#5a6478">${def.name} · ${escapeHtml(p.address ?? '')}</span><br/>
-            <button data-route-uid="${escapeHtml(p.uid)}" onclick="__lcPoiAct&&__lcPoiAct(this)">步行路线核验</button> <button data-hours-uid="${escapeHtml(p.uid)}" onclick="__lcPoiAct&&__lcPoiAct(this)">营业时段</button>
-            <div class="poi-pop-row">
-              <select data-corr-status="${escapeHtml(p.uid)}">
-                <option>已核验</option><option>停业</option><option>迁移</option><option>分类错误</option>
-              </select>
-              <input data-corr-note="${escapeHtml(p.uid)}" placeholder="说明(可空)">
-              <button data-corr-save="${escapeHtml(p.uid)}" onclick="__lcPoiAct&&__lcPoiAct(this)" data-corr-name="${escapeHtml(p.name)}">标注</button>
-              <button data-corr-undo-uid="${escapeHtml(p.uid)}" onclick="__lcPoiAct&&__lcPoiAct(this)">撤销标注</button>
-            </div></div>`,
-            { width: 240 }
-          );
-          map.openInfoWindow(info, new BMapGL.Point(p.lng, p.lat));
+          this.openPoiPop(p, def.name);
         });
         map.addOverlay(marker);
         this.overlays.poi.push(marker);
@@ -340,7 +350,7 @@ export class MapView {
         const marker = new BMapGL.Marker(pt, { icon: iconFor('#00bcd4', `补${site.rank}`) });
         marker.addEventListener('click', () => {
           const info = new BMapGL.InfoWindow(
-            `<div style="font-size:13px;min-width:220px"><b>规划建议 #${site.rank}：补建${catName(site.category)}</b><br/>${escapeHtml(site.rationale)}</div>`,
+            `<div class="poi-pop"><div class="poi-pop-title">规划建议 #${site.rank}：补建${catName(site.category)}</div><div class="poi-pop-sub">${escapeHtml(site.rationale)}</div></div>`,
             { width: 250 }
           );
           map.openInfoWindow(info, pt);
@@ -405,7 +415,7 @@ export class MapView {
           ? `<b>${escapeHtml(c.name)}</b><br/>评分 ${c.score}（${escapeHtml(c.grade)} 级）· 人口覆盖率 ${coverage}${c.dominantMissing ? `<br/>主要缺失：${escapeHtml(catName(c.dominantMissing))}` : ''}`
           : `<b>${escapeHtml(c.name)}</b><br/>分析失败`;
         marker.addEventListener('click', () => {
-          const info = new BMapGL.InfoWindow(`<div style="font-size:13px;min-width:200px">${summary}</div>`, { width: 240 });
+          const info = new BMapGL.InfoWindow(`<div class="poi-pop">${summary}</div>`, { width: 240 });
           map.openInfoWindow(info, pt);
         });
         map.addOverlay(marker);

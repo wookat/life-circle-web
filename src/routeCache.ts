@@ -12,6 +12,8 @@ export interface CachedRoute {
   distM: number;
   channel: string;
   at: number;
+  /** 真实步行路径折线点列（可选：旧缓存项没有，命中后回源取一次） */
+  path?: LatLng[];
 }
 
 export function routeCacheKey(origin: LatLng, dest: LatLng): string {
@@ -27,15 +29,17 @@ export function getCachedRoute(key: string, storage: StorageLike = localStorage)
     if (!entry || typeof entry !== 'object') return null;
     if (!Number.isFinite(entry.at) || Date.now() - entry.at > TTL || entry.at > Date.now()) return null;
     if (!Number.isFinite(entry.distM) || entry.distM < 0 || typeof entry.channel !== 'string') return null;
-    return { distM: entry.distM, channel: entry.channel, at: entry.at };
+    const path = Array.isArray(entry.path) && entry.path.every((p: LatLng) => Number.isFinite(p?.lat) && Number.isFinite(p?.lng))
+      ? entry.path as LatLng[] : undefined;
+    return { distM: entry.distM, channel: entry.channel, at: entry.at, path };
   } catch {
     return null;
   }
 }
 
-export function setCachedRoute(key: string, distM: number, channel: string, storage: StorageLike = localStorage): void {
+export function setCachedRoute(key: string, distM: number, channel: string, path?: LatLng[], storage: StorageLike = localStorage): void {
   try {
-    storage.setItem(key, JSON.stringify({ distM, channel, at: Date.now() }));
+    storage.setItem(key, JSON.stringify({ distM, channel, at: Date.now(), path }));
     const entries: { key: string; at: number }[] = [];
     for (let i = 0; i < storage.length; i++) {
       const k = storage.key(i);

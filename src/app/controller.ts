@@ -25,7 +25,7 @@ import {
   type PersonaId,
   type RouteProbe
 } from '../../shared/index.js';
-import { ClientGateway, GatewayChain, MockGateway, ServerGateway, makeProbeDestinations, type Gateway } from '../api.js';
+import { ClientGateway, GatewayChain, MockGateway, ServerGateway, makeProbeDestinations, type Gateway, type WalkingStepGeo } from '../api.js';
 import { fieldToDataUrl } from '../fieldRender.js';
 import { Hud, banner, CHANNEL_LABEL } from '../hud.js';
 import type { LayerKey } from '../map.js';
@@ -155,10 +155,20 @@ async function verifyRouteToPoi(uid: string) {
     return;
   }
   const key = routeCacheKey(state.center, poi);
+  const fetchRoutePath = async (): Promise<LatLng[]> => {
+    try {
+      const res = await state.chain?.walkingGeo?.(state.center, poi);
+      const steps = res?.value ?? [];
+      const path = steps.flatMap((s: WalkingStepGeo) => s.path ?? []);
+      return path.length >= 2 ? path : [state.center, poi];
+    } catch {
+      return [state.center, poi];
+    }
+  };
   const cached = getCachedRoute(key);
   if (cached && cached.channel !== 'mock') {
     // F1：合成兜底结果不是核验证据，不读取、不入缓存
-    map.setRoute([state.center, poi]);
+    map.setRoute(cached.path ?? await fetchRoutePath());
     reportRoute(poi, cached.distM, `${cached.channel} · 缓存`, r);
     return;
   }
@@ -174,8 +184,9 @@ async function verifyRouteToPoi(uid: string) {
         : '路线核验失败：步行规划通道当前不可用。系统不伪装估计结果，请稍后重试或更换通道。');
       return;
     }
-    setCachedRoute(key, probe.distM, res.channel);
-    map.setRoute([state.center, poi]);
+    const path = await fetchRoutePath();
+    setCachedRoute(key, probe.distM, res.channel, path);
+    map.setRoute(path);
     reportRoute(poi, probe.distM, res.channel, r);
   } catch (err) {
     banner(`路线核验失败：${String((err as Error)?.message ?? err)}。系统不伪装估计结果。`);
@@ -237,8 +248,9 @@ function bindGlobal() {
     }
     if (ds.corrSave) {
       const uid = ds.corrSave;
-      const status = (document.querySelector(`[data-corr-status="${uid}"]`) as HTMLSelectElement)?.value as CorrectionStatus;
-      const note = (document.querySelector(`[data-corr-note="${uid}"]`) as HTMLInputElement)?.value ?? '';
+      // React 弹窗直接把 status/note 放 dataset；保留 DOM 读取作兼容回退
+      const status = (ds.corrStatus ?? (document.querySelector(`[data-corr-status="${uid}"]`) as HTMLSelectElement)?.value) as CorrectionStatus;
+      const note = ds.corrNote ?? (document.querySelector(`[data-corr-note="${uid}"]`) as HTMLInputElement)?.value ?? '';
       const poi = state.result?.pois.find((p) => p.uid === uid);
       const rec = addCorrection(uid, poi?.name ?? '', poi ? { lat: poi.lat, lng: poi.lng } : { lat: 0, lng: 0 }, poi?.source ?? 'unknown', status, note);
       if (rec) banner(`已标注「${poi?.name ?? uid}」：${status}。标注仅作现场记录，未计入评分；可随时撤销。`, 'info', 10000);
@@ -249,7 +261,8 @@ function bindGlobal() {
       banner(left ? '已撤销最新一条标注，历史可继续回退。' : '标注已全部撤销。', 'info');
     }
   };
-  (window as unknown as Record<string, unknown>).__lcPoiAct = (el: HTMLElement) => poiAction(el.dataset);
+  // React 弹窗直接传 dataset 对象；body 委托仍处理弹窗外/测试用的 data-* 元素
+  (window as unknown as Record<string, unknown>).__lcPoiAct = (ds: Record<string, string>) => poiAction(ds);
   document.body.addEventListener('click', (event) => {
     const el = event.target instanceof Element
       ? event.target.closest<HTMLElement>('[data-route-uid],[data-hours-uid],[data-corr-save],[data-corr-undo-uid]')

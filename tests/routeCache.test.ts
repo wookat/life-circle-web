@@ -21,14 +21,14 @@ describe('路线核验缓存', () => {
   it('写入后可读回距离与通道', () => {
     const s = memoryStorage();
     const key = routeCacheKey(a, b);
-    setCachedRoute(key, 823, 'server', s);
+    setCachedRoute(key, 823, 'server', undefined, s);
     expect(getCachedRoute(key, s)).toMatchObject({ distM: 823, channel: 'server' });
   });
 
   it('过期与未来时间戳都不返回', () => {
     const s = memoryStorage();
     const key = routeCacheKey(a, b);
-    setCachedRoute(key, 100, 'server', s);
+    setCachedRoute(key, 100, 'server', undefined, s);
     s.setItem(key, JSON.stringify({ distM: 100, channel: 'server', at: Date.now() - 7 * 3600 * 1000 }));
     expect(getCachedRoute(key, s)).toBeNull();
     s.setItem(key, JSON.stringify({ distM: 100, channel: 'server', at: Date.now() + 60_000 }));
@@ -50,7 +50,7 @@ describe('路线核验缓存', () => {
     const s = memoryStorage();
     const keys = Array.from({ length: 42 }, (_, i) => {
       const k = routeCacheKey(a, { lat: 28 + i * 0.001, lng: 117 });
-      setCachedRoute(k, i, 'server', s);
+      setCachedRoute(k, i, 'server', undefined, s);
       return k;
     });
     expect(getCachedRoute(keys[0], s)).toBeNull();
