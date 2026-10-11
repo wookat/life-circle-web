@@ -243,7 +243,7 @@ export default function App() {
 
       <Modal open={helpOpen} onCancel={() => setHelpOpen(false)} footer={null} title="使用说明">
         <ol className="modal-body" style={{ paddingLeft: 20, lineHeight: 2 }}>
-          <li>输入地址定位，或直接在地图上<b>点击/右键</b>选择中心点（触屏设备可点顶栏「图上选点」后点地图）；</li>
+          <li>输入地址定位，或直接在地图上<b>点击/右键</b>选择中心点（触屏设备<b>长按地图</b>亦可，或点顶栏「图上选点」后点地图）；</li>
           <li>选择人群（老年人速度更慢，可达范围更小）；</li>
           <li>点击「开始体检」，系统基于真实路网计算步行时间场；</li>
           <li>查看体检报告、对标清单与补点规划建议；</li>

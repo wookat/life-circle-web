@@ -60,13 +60,34 @@ export class MapView {
       if (onContext) {
         // 用 DOM contextmenu 而非地图 rightclick：POI/热力面等覆盖物会吞掉地图层事件
         const el = document.getElementById('map')!;
+        const fire = (px: { x: number; y: number }) => {
+          const ll = this.map.pixelToPoint(new BMapGL.Pixel(px.x, px.y));
+          if (ll) onContext({ lat: ll.lat, lng: ll.lng }, px);
+        };
         el.addEventListener('contextmenu', (e: MouseEvent) => {
           e.preventDefault();
           const rect = el.getBoundingClientRect();
-          const px = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-          const ll = this.map.pixelToPoint(new BMapGL.Pixel(px.x, px.y));
-          if (ll) onContext({ lat: ll.lat, lng: ll.lng }, px);
+          fire({ x: e.clientX - rect.left, y: e.clientY - rect.top });
         });
+        // 触屏等效：单指长按 550ms 弹同一份「设为中心点」菜单（拖动/捏合即取消）
+        let lpTimer: ReturnType<typeof setTimeout> | null = null;
+        let lpStart: { x: number; y: number } | null = null;
+        const lpCancel = () => { if (lpTimer) clearTimeout(lpTimer); lpTimer = null; lpStart = null; };
+        el.addEventListener('touchstart', (e: TouchEvent) => {
+          if (e.touches.length !== 1) { lpCancel(); return; }
+          const t = e.touches[0];
+          const rect = el.getBoundingClientRect();
+          lpStart = { x: t.clientX - rect.left, y: t.clientY - rect.top };
+          lpTimer = setTimeout(() => { if (lpStart) fire(lpStart); lpCancel(); }, 550);
+        }, { passive: true });
+        el.addEventListener('touchmove', (e: TouchEvent) => {
+          if (!lpStart || e.touches.length !== 1) return;
+          const t = e.touches[0];
+          const rect = el.getBoundingClientRect();
+          if (Math.hypot(t.clientX - rect.left - lpStart.x, t.clientY - rect.top - lpStart.y) > 10) lpCancel();
+        }, { passive: true });
+        el.addEventListener('touchend', lpCancel);
+        el.addEventListener('touchcancel', lpCancel);
       }
       return true;
     } catch (err) {

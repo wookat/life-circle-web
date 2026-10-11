@@ -397,6 +397,11 @@ body.sb-off #sidebar, body.panel-off #panel { display: none; }
   /* 窄屏页签：8 个页签全部可见，不收进 antd「···」溢出菜单 */
   #panel-tabs .ant-tabs-tab { padding: 8px 0; }
   #panel-tabs .ant-tabs-tab + .ant-tabs-tab { margin-left: 14px; }
+  /* 触屏目标 ≥40px：抽屉钮/图标钮/底部操作/图层复选/弹窗按钮 */
+  #topbar .ant-btn, #topbar .ant-select-selector { min-height: 40px; }
+  #panel-footer .ant-btn { min-height: 40px; font-size: 14px; }
+  #sidebar .ant-checkbox-wrapper { min-height: 40px; display: flex; align-items: center; }
+  .poi-pop .ant-btn, .BMap_bubble_pop .ant-btn { min-height: 40px; }
   .hud-box { width: min(340px, 92vw); }
 }
 
