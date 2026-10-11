@@ -5,46 +5,52 @@
 ════════════════════════════════════════════════════════
 
 一、材料清单
-  1. 圈点-参赛作品介绍.pdf …… 作品介绍文档（14 页：项目背景、核心功能、
+  1. 圈点-参赛作品介绍.pdf …… 作品介绍文档（15 页：项目背景、核心功能、
      技术架构、诊断口径、规划功能、人群差异、实测验证、街道/城区批量、
-     工程与开源、可信机制、交付与展望）
-  2. 圈点-演示视频-8分钟讲解版.mp4 …… 作品演示视频（8 分钟，含完整
-     使用流程、真实社区实测数据与规划工作台演示）
+     工程与开源、可信机制、交付与展望；末页附 2026-10-11 功能更新：
+     人群公平性对比、补点收益量化、决策摘要、街道排行仪表盘）
+  2. 圈点-核心功能演示-v2.mp4 …… 新版界面核心功能屏幕实录
+     （定位 → 体检 → 报告与决策摘要 → 三人群公平性对比 → 规划收益 → 街道排名）
   3. 提交说明.txt …… 本文件
 
 二、代码仓库（完整可运行源码）
-  GitHub：https://github.com/nghqqa/life-circle-15min
-  Gitee ：https://gitee.com/nghqqa/life-circle-15min
+  GitHub：https://github.com/wookat/life-circle-web
   · MIT 开源协议；README 含快速开始指引
-  · 自动化测试 38 项全部通过；类型检查与前后端构建通过（GitHub Actions CI）
-  · 参赛版本：tag「submission-2026」（业务代码 4f981b2，与介绍文档标注一致）；
+  · 自动化测试 206 项全部通过（vitest 175 + playwright 31）；
+    类型检查与前后端构建通过；CI 工作流随仓库附带
+  · 参赛版本：tag「submission-2026-v2」（当前 main，与介绍文档标注一致）；
     仓库在提交后仍按路线图持续开发，复现与评审请以该 tag 为准：
-    git clone https://github.com/nghqqa/life-circle-15min.git
-    cd life-circle-15min && git checkout submission-2026
+    git clone https://github.com/wookat/life-circle-web.git
+    cd life-circle-web && git checkout submission-2026-v2
 
 三、演示复现指引（评审方快速跑通）
-  环境：Node.js ≥ 20
-    git clone https://github.com/nghqqa/life-circle-15min.git
-    cd life-circle-15min
-    npm install
-    npm run dev
-  → 打开 http://localhost:5173，无需任何密钥即进入「演示模式」
-    （确定性合成数据，完整体验：定位 → 体检 → 热力面 → 盲区 →
-     规划建议采纳 → 对标清单 → 街道体检 全流程）
+  方式一 · Docker 一键（推荐，已实测）：
+    git clone https://github.com/wookat/life-circle-web.git
+    cd life-circle-web && docker compose up --build
+    → 访问 http://localhost:8787，无需任何密钥即进入「演示模式」
+  方式二 · 本地 Node.js ≥ 20：
+    npm install && npm run dev
+    → 打开 http://localhost:5173，同样自动进入演示模式
+    （确定性合成数据，完整体验：定位 → 体检 → 热力面 → 人群对比 →
+     盲区 → 规划建议采纳 → 方案对比 → 街道体检 全流程）
 
   接入真实数据（可选）：
     cp .env.example .env
     填入百度地图开放平台的浏览器端与服务端 AK 后重启，
     即可以真实路网数据完成体检（服务端通道 48 向批量算路）。
-
-  Docker 一键部署：
-    cp .env.example .env && docker compose up --build
-    访问 http://localhost:8787（API 文档 /api/docs）
+    AK 安全：.env 已被 gitignore，密钥只存在于本地环境变量；
+    浏览器端 AK 配 Referer 白名单，服务端 AK 配 IP 白名单。
 
 四、技术说明
   · 数据能力：百度地图地理编码 v3、逆地理编码 v3、POI 检索 place v2、
     批量算路 routematrix v2、步行规划 direction v2、GL JS API 渲染
-  · 实测案例：上饶市江西师范大学数字产业学院（E 级）、信州区中心广场
-    （C 级）、东市街道 10 小区批量（均分 88.4）、信州区城区试点（14 小区）
+  · 实测案例（2026-10-11 真 AK 复测批次，服务端通道）：
+    新校区灵溪街道融创路（成人/老年均 E 级，26–29 分区间，百度 POI 日间漂移）；
+    老城中心广场（成人/老年均 B 级 76 分，43→15 处、8→7 类）；
+    东市街道 9 小区批量（均分 81.8，B 级×9，短板类别分布与评分排行入库）
+  · 插值精度自证：每次分析抽样 8 个真实算路点对比模型估计，
+    常规街区 MAE 3.89 分钟（23.7%），困难地形 5.73 分钟（31.6%），
+    老年口径 8.56–9.3 分钟，误差透明可查
   · 详细技术设计见仓库 docs/TECH_DESIGN.md，
-    真实对比测试报告见 docs/COMPARISON_TEST.md
+    真实对比测试报告见 docs/COMPARISON_TEST.md，
+    答辩演示脚本（诊断→处方→验证动线）见 docs/DEMO_SCRIPT.md
