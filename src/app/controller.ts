@@ -276,6 +276,7 @@ function bindGlobal() {
 
 // ---------- JSX 绑定层（React props 调用） ----------
 export const ui = {
+  projects: () => projects,
   locate: async () => {
     const addr = (document.getElementById('addr-input') as HTMLInputElement).value.trim();
     if (!addr || !state.chain) return;

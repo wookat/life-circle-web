@@ -179,6 +179,6 @@ test('窄屏侧栏可导入与保存项目', async ({ page }, testInfo) => {
   await page.locator('#project-name').fill('手机端验收');
   await page.locator('#project-save').click();
   await expect(page.locator('#project-status')).toContainText('已保存');
-  await expect(page.locator('#project-list')).toContainText('手机端验收');
+  await expect(page.locator('#project-list').locator('xpath=ancestor::*[contains(@class,"ant-select")]').locator('.ant-select-selection-item')).toContainText('手机端验收');
   await page.screenshot({ path: testInfo.outputPath('mobile-projects.png') });
 });

@@ -6,11 +6,12 @@ import { analyzeGaps, buildChecklist, computeScore, type AnalysisResult } from '
 
 const emptyWorkbench = (): WorkbenchSnapshot => ({ acceptedSites: [], rejectedSites: [] });
 // antd Select：id 落在内部 input 上；点击展开后从 portal 下拉里按选项文案选
-async function selectAntd(page: Page, id: string, label: string) {
+async function selectAntd(page: Page, id: string, label: string | RegExp) {
   const sel = page.locator(`#${id}`);
   const wrap = sel.locator('xpath=ancestor-or-self::*[contains(concat(" ",normalize-space(@class)," ")," ant-select ")]').first();
   await wrap.click();
-  await page.locator('.ant-select-dropdown .ant-select-item-option').getByText(label, { exact: true }).click();
+  const opt = page.locator('.ant-select-dropdown .ant-select-item-option').getByText(label as string, { exact: typeof label === 'string' });
+  await opt.first().click();
 }
 async function importFixture(page: Page, result = comparisonFixture(), workbench = emptyWorkbench()) {
   const project = createProject(result, workbench, '完整流程验收');
@@ -126,23 +127,23 @@ test('另存为、切换和删除不会串改方案，取消删除保留项目',
   const changedCopy = await current(page);
   expect(changedCopy.workbench.acceptedSites).toHaveLength(0);
   expect(changedCopy.workbench.scenarios.B.acceptedSites).toHaveLength(0);
-  await page.locator('#project-list').selectOption(original.id); await page.locator('#project-open').click();
+  await selectAntd(page, 'project-list', /^项目原件 ·/); await page.locator('#project-open').click();
   expect(await current(page)).toEqual(original);
   await expect(page.locator('#project-name')).toHaveValue('项目原件');
-  await page.locator('#project-list').selectOption(copy.id); await page.locator('#project-open').click();
+  await selectAntd(page, 'project-list', /^项目原件（副本） ·/); await page.locator('#project-open').click();
   expect(await current(page)).toEqual(changedCopy);
   accept = false; const beforeDelete = await store(page); await page.locator('#project-delete').click();
   expect(await store(page)).toEqual(beforeDelete);
   accept = true; await page.locator('#project-delete').click();
   expect((await store(page)).projects).toEqual([original]);
-  await page.locator('#project-list').selectOption(original.id); await page.locator('#project-open').click();
+  await selectAntd(page, 'project-list', /^项目原件 ·/); await page.locator('#project-open').click();
   await page.locator('#project-delete').click();
   expect((await store(page)).projects).toEqual([]);
   await page.locator('[data-tab="plan"]').click(); await page.locator('[data-act="undo-accept"]').click();
   expect((await store(page)).projects).toEqual([]);
   const backup = JSON.parse(await download(page, '#project-export'));
   expect(backup.workbench.acceptedSites).toHaveLength(0);
-  await page.reload(); await expect(page.locator('#project-list')).toHaveValue('');
+  await page.reload(); await expect(page.locator('#project-list')).toHaveValue(''); // antd Select 内层 input 无选中时值为空
   await expect(page.locator('#project-export')).toBeDisabled();
 });
 

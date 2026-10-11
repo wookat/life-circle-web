@@ -3,6 +3,7 @@ import { Button, Checkbox, Input, Modal, Segmented, Select, Tabs } from 'antd';
 import { AimOutlined, EnvironmentOutlined, FileTextOutlined, QuestionCircleOutlined, SearchOutlined, ShareAltOutlined } from '@ant-design/icons';
 import { banner } from '../hud.js';
 import { render as renderPanel } from '../panels.js';
+import type { ProjectView } from '../projectUi.js';
 import { PanelBody } from './PanelBody.js';
 import { init, ui } from './controller.js';
 
@@ -23,6 +24,8 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [persona, setPersona] = useState('adult');
   const [minutes, setMinutes] = useState('15');
+  const [proj, setProj] = useState<ProjectView | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const collapseRef = useRef<((side: 'left' | 'right') => void) | null>(null);
 
   useEffect(() => {
@@ -33,11 +36,13 @@ export default function App() {
       setPersona(d.persona); setMinutes(String(d.minutes));
     };
     window.addEventListener('lc:tab', onTab);
+    const onProjects = () => setProj(ui.projects()?.getView() ?? null);
     window.addEventListener('lc:busy', onBusy);
     window.addEventListener('lc:controls', onControls);
+    window.addEventListener('lc:projects', onProjects);
     collapseRef.current = ui.collapseInit();
     renderPanel();
-    void init().catch((e) => {
+    void init().then(() => setProj(ui.projects()?.getView() ?? null)).catch((e) => {
       console.error(e);
       banner(`初始化失败：${(e as Error).message}`);
     });
@@ -45,6 +50,7 @@ export default function App() {
       window.removeEventListener('lc:tab', onTab);
       window.removeEventListener('lc:busy', onBusy);
       window.removeEventListener('lc:controls', onControls);
+      window.removeEventListener('lc:projects', onProjects);
     };
   }, []);
 
@@ -89,23 +95,32 @@ export default function App() {
           <section className="card" id="projects-card">
             <h3>本地项目</h3>
             <label htmlFor="project-name">当前项目名称</label>
-            <Input id="project-name" maxLength={100} placeholder="完成体检后自动创建项目" autoComplete="off" />
+            <Input id="project-name" maxLength={100} placeholder="完成体检后自动创建项目" autoComplete="off"
+              value={proj?.name ?? ''} disabled={proj?.nameDisabled ?? true}
+              onChange={(e) => ui.projects()?.setName(e.target.value)} />
             <div className="project-actions">
-              <Button id="project-save" disabled>保存</Button>
-              <Button id="project-save-as" disabled>另存为</Button>
+              <Button id="project-save" disabled={proj?.saveDisabled ?? true} onClick={() => ui.projects()?.save()}>保存</Button>
+              <Button id="project-save-as" disabled={proj?.saveDisabled ?? true} onClick={() => ui.projects()?.saveAs()}>另存为</Button>
             </div>
             <label htmlFor="project-list">已保存项目</label>
-            <select id="project-list" aria-label="已保存项目"><option value="">暂无本地项目</option></select>
+            <Select
+              id="project-list" aria-label="已保存项目" style={{ width: '100%' }}
+              placeholder="暂无本地项目" disabled={proj?.listDisabled ?? true}
+              value={proj?.listValue || undefined}
+              options={(proj?.entries ?? []).map((e) => ({ value: e.id, label: e.label, title: e.title }))}
+              onChange={(v) => ui.projects()?.select(v)}
+            />
             <div className="project-actions">
-              <Button id="project-open" disabled>打开</Button>
-              <Button id="project-delete" disabled>删除</Button>
+              <Button id="project-open" disabled={proj?.openDisabled ?? true} onClick={() => ui.projects()?.open()}>打开</Button>
+              <Button id="project-delete" disabled={proj?.openDisabled ?? true} onClick={() => ui.projects()?.remove()}>删除</Button>
             </div>
             <div className="project-actions">
-              <Button id="project-import">导入项目</Button>
-              <Button id="project-export" disabled>导出项目</Button>
+              <Button id="project-import" disabled={proj?.importDisabled ?? true} onClick={() => fileRef.current?.click()}>导入项目</Button>
+              <Button id="project-export" disabled={proj?.saveDisabled ?? true} onClick={() => ui.projects()?.exportJson()}>导出项目</Button>
             </div>
-            <input id="project-file" type="file" accept=".json,application/json" className="hidden" />
-            <p id="project-status" className="project-status" role="status" aria-live="polite">完成体检后自动保存。</p>
+            <input id="project-file" ref={fileRef} type="file" accept=".json,application/json" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) ui.projects()?.pickFile(f); }} />
+            <p id="project-status" className="project-status" role="status" aria-live="polite" data-error={String(proj?.statusError ?? false)}>{proj?.statusText ?? '完成体检后自动保存。'}</p>
             <p className="project-note">仅保存在当前浏览器。分析结果与规划选择会自动保存；请导出项目备份，换设备后可导入继续。</p>
           </section>
           <section className="card">
