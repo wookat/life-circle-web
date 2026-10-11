@@ -72,6 +72,36 @@ function StreetStatus({ view }: { view: StreetView }) {
         {sum.worst && <>、最差 <b>{shortName(sum.worst.name)}（{sum.worst.score}）</b></>}。
         地图上已按等级着色标注各小区。
       </div>
+      {(() => {
+        const scored = s.communities.filter((c) => c.score >= 0);
+        if (scored.length < 2) return null;
+        const miss = new Map<string, number>();
+        scored.forEach((c) => { if (c.dominantMissing) miss.set(c.dominantMissing, (miss.get(c.dominantMissing) ?? 0) + 1); });
+        const maxScore = Math.max(...scored.map((c) => c.score), 1);
+        return (
+          <>
+            {miss.size > 0 && (
+              <div className="rpt-summary">
+                <span className="sum-label">短板类别分布</span>
+                {[...miss.entries()].sort((a, b) => b[1] - a[1]).map(([cat, n]) => (
+                  <Tag key={cat} className="pill mid" style={{ marginRight: 6 }}>{catName(cat)} ×{n}</Tag>
+                ))}
+                ——这些是本片区最普遍的缺口，区级统筹补建收益最大。
+              </div>
+            )}
+            <div className="sec-title">小区评分排行</div>
+            <div className="rank-bars">
+              {[...scored].sort((a, b) => b.score - a.score).map((c) => (
+                <div className="rank-bar-row" key={c.name}>
+                  <span className="rank-bar-name">{shortName(c.name)}</span>
+                  <span className="rank-bar-track"><span className="rank-bar-fill" style={{ width: `${Math.round((c.score / maxScore) * 100)}%`, background: c.score >= 75 ? 'var(--ok)' : c.score >= 60 ? 'var(--warn)' : 'var(--bad)' }} /></span>
+                  <span className="rank-bar-score">{c.score}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        );
+      })()}
       {weak.length > 0 && (
         <>
           <div className="sec-title">公平性视角 · 薄弱小区清单</div>

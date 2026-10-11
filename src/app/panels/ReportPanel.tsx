@@ -1,19 +1,27 @@
-import { useEffect } from 'react';
-import { Alert, Card, Statistic, Table, Tag } from 'antd';
+import { useEffect, useState } from 'react';
+import { Alert, Button, Card, Statistic, Table, Tag } from 'antd';
+import { TeamOutlined } from '@ant-design/icons';
 import type { AnalysisResult, PoiSearchCompleteness } from '../../../shared/types.js';
-import { CATEGORY_MAP, PERSONA_MAP } from '../../../shared/config.js';
+import type { PersonaId } from '../../../shared/types.js';
+import { CATEGORY_MAP, PERSONA_MAP, PERSONAS } from '../../../shared/config.js';
 import { CHANNEL_LABEL } from '../../hud.js';
 import { renderCharts } from '../../charts.js';
 import { explainResult } from '../../explain.js';
 import { sameRules } from '../../panels.js';
+import { ui } from '../controller.js';
 
 const GRADE_COLOR: Record<string, string> = { A: '#2f9e44', B: '#74b816', C: '#f08c00', D: '#e8590c', E: '#e03131' };
 const POI_STATUS: Record<PoiSearchCompleteness['status'], string> = {
   complete: '已取完', truncated: '达到上限', partial: '部分结果', unknown: '总量未知', failed: '检索失败', skipped: '未执行'
 };
 
+const PERSONA_ORDER: PersonaId[] = ['adult', 'elderly', 'child'];
+
 export function ReportPanel({ r, correctionsCount }: { r: AnalysisResult | null; correctionsCount: number }) {
   useEffect(() => { if (r) renderCharts(r); }, [r]);
+  const [compare, setCompare] = useState<Partial<Record<PersonaId, AnalysisResult | null>> | null>(null);
+  const [comparing, setComparing] = useState(false);
+  useEffect(() => { setCompare(null); }, [r]);
 
   if (!r) {
     return (
@@ -70,6 +78,70 @@ export function ReportPanel({ r, correctionsCount }: { r: AnalysisResult | null;
           <div className="rpt-sub rpt-meta">
             插值精度核验：抽样 {r.accuracy.samples} 个算路点{r.mock ? '（当前含演示数据，仅供流程验证）' : ''}，模型估计平均绝对误差 <b>{r.accuracy.maeMinutes} 分钟（{r.accuracy.maePercent}%）</b>，最大偏差 {r.accuracy.worstPercent}%
           </div>
+        )}
+
+        <div className="rpt-verdict">
+          {r.planSites.length > 0 ? (
+            <>优先补建「{CATEGORY_MAP[r.planSites[0].category]?.name ?? r.planSites[0].category}」于候选 #{r.planSites[0].rank}：新覆盖 {r.planSites[0].coveredCells} 个居住网格，该类覆盖率 {r.planSites[0].beforePct}%→{r.planSites[0].afterPct}%。</>
+          ) : (
+            <>{r.incomplete ? '检索数据不完整，暂无可可靠推荐的补点；请核验数据后再规划。' : '当前覆盖良好，暂无优先补点建议。'}</>
+          )}
+        </div>
+      </Card>
+
+      <Card className="rpt-hero" size="small" title={<><TeamOutlined /> 人群公平性对比</>}>
+        {!compare ? (
+          <div className="rpt-sub">
+            同一坐标、同一 {r.minutes} 分钟口径下，对成人 / 老年人 / 儿童（陪同）各跑一次完整体检，
+            看服务是否对所有人群公平。
+            <Button
+              type="primary" size="small" loading={comparing}
+              style={{ marginLeft: 8 }}
+              onClick={async () => {
+                setComparing(true);
+                try { setCompare(await ui.comparePersonas(r)); } finally { setComparing(false); }
+              }}
+            >生成三人群对比</Button>
+            {comparing && <span className="rpt-sub">（复用同一引擎另跑两轮，约 1-2 分钟）</span>}
+          </div>
+        ) : (
+          <>
+            <div className="pcmp-row">
+              {PERSONA_ORDER.map((pid) => {
+                const pr = compare[pid];
+                const cur = pid === r.persona;
+                return (
+                  <div className={`pcmp${cur ? ' current' : ''}`} key={pid}>
+                    <div className="pcmp-name">{PERSONA_MAP[pid].name}{cur && <Tag className="pill ok" style={{ marginLeft: 4 }}>当前</Tag>}</div>
+                    {pr ? (
+                      <>
+                        <div className="pcmp-score" style={{ color: GRADE_COLOR[pr.score.grade] ?? '#666' }}>
+                          <b>{pr.score.grade}</b><span>{pr.score.total} 分</span>
+                        </div>
+                        <div className="pcmp-meta">
+                          累积机会 {pr.cumulative?.total ?? '—'} 处 / {pr.cumulative?.categoriesCovered ?? '—'} 类<br />
+                          人口覆盖率 {pr.score.coverageUnavailable ? '无法评估' : `${Math.round((pr.score.dims.coverage ?? 0) * 100)}`}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="pcmp-meta" style={{ color: 'var(--warn)' }}>该人群分析失败</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {(() => {
+              const scores = PERSONA_ORDER.map((p2) => compare[p2]?.score.total).filter((v): v is number => typeof v === 'number');
+              if (scores.length < 2) return null;
+              const spread = Math.max(...scores) - Math.min(...scores);
+              const worst = PERSONA_ORDER.find((p2) => compare[p2]?.score.total === Math.min(...scores));
+              return (
+                <div className="rpt-sub" style={{ marginTop: 8 }}>
+                  同一点位人群极差 <b>{spread} 分</b>{spread >= 15 && worst && <>——<b>{PERSONA_MAP[worst].name}</b>群体服务可达性明显更差，适老化/适幼化改造应优先</>}。
+                </div>
+              );
+            })()}
+          </>
         )}
       </Card>
 

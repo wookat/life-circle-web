@@ -1,6 +1,7 @@
 import {
   CATEGORIES,
   DEFAULT_CENTER,
+  PERSONAS,
   PERSONA_MAP,
   THRESHOLDS,
   buildAnalysisWarnings,
@@ -49,6 +50,7 @@ import { getBoundary, pointInBoundary } from '../boundary.js';
 const hud = new Hud();
 let projects: ReturnType<typeof setupProjects> | null = null;
 let analyzing = false;
+let comparing = false;
 let locationRevision = 0;
 
 const state = {
@@ -302,6 +304,35 @@ export const ui = {
     hud.finish();
     banner(`分析失败：${(e as Error).message ?? e}`);
   }),
+  // 人群公平性对比：同一坐标对另外两个人群复跑纯计算核心（不重定位、不刷 HUD）
+  comparePersonas: async (r: AnalysisResult): Promise<Partial<Record<PersonaId, AnalysisResult | null>>> => {
+    const chain = state.chain;
+    const out: Partial<Record<PersonaId, AnalysisResult | null>> = { [r.persona]: r };
+    if (!chain || analyzing || comparing) return out;
+    comparing = true;
+    const prevCtx = window.__LC_MOCK_CTX__;
+    try {
+      for (const p of PERSONAS) {
+        if (p.id === r.persona) continue;
+        try {
+          out[p.id] = await computeReport(chain, {
+            center: r.center,
+            centerName: r.centerName,
+            persona: p.id,
+            minutes: r.minutes,
+            crossingsOn: false,
+            stepUsage: []
+          });
+        } catch {
+          out[p.id] = null;
+        }
+      }
+    } finally {
+      window.__LC_MOCK_CTX__ = prevCtx;
+      comparing = false;
+    }
+    return out;
+  },
   togglePick: () => setPickMode(!state.pickMode),
   setPersona: (v: PersonaId) => { state.persona = v; },
   setMinutes: (v: string) => { state.minutes = Number(v); },
@@ -484,192 +515,24 @@ async function analyze() {
     map.setCenter(state.center, state.centerName || undefined);
     hud.done(0, 'server', 0);
 
-    // 2) 扇形采样批量算路：先用 2 个探针预检通道健康度——
-    //    服务端可用走 48 向批量；否则降为 16 向逐向 SDK 算路（预检探针复用为正北/正南方向）
-    hud.doing(1, `路网探针 · 探测半径 ${Math.round(state.minutes * persona.speed)}m`);
-    const probeM = state.minutes * persona.speed;
-    const pre = await chain.routeMatrix(state.center, [
-      destination(state.center, 0, probeM),
-      destination(state.center, 180, probeM)
-    ]);
-    const useServer = pre.channel === 'server';
-    const dirs = useServer ? THRESHOLDS.sampleDirs : 16;
-    const dests = makeProbeDestinations(state.center, dirs, probeM);
-    const probes: (RouteProbe | null)[] = new Array(dirs).fill(null);
-    probes[0] = pre.value[0];
-    probes[useServer ? 24 : 8] = pre.value[1];
-    const restIdx = probes.map((v, i) => (v === null ? i : -1)).filter((i) => i >= 0);
-    const rm = await chain.routeMatrix(
-      state.center,
-      restIdx.map((i) => dests[i])
-    );
-    restIdx.forEach((idx, k) => {
-      probes[idx] = rm.value[k];
-    });
-    const okProbes = probes.filter((p) => p && p.ok).length;
-    stepUsage.push({
-      name: '路网采样算路',
-      usage: { channel: rm.channel, ms: pre.ms + rm.ms, note: `${okProbes}/${dirs} 向成功` }
-    });
-    hud.done(1, rm.channel, pre.ms + rm.ms);
-
-    // 3) 等时圈模型 + 时间场 + 等时环
-    hud.doing(2, '空间插值生成连续步行时间场');
-    const model = buildIsochroneModel(state.center, probes, {
-      dirs,
-      minutes: state.minutes,
-      speed: persona.speed,
-      probeM
-    });
-    const field = buildTimeField(model);
-    const levels = [5, 10, state.minutes].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
-    const rings = levels.map((level) => ({ level, lines: contourPolylines(field, level) }));
-    hud.done(2, 'server', 0);
-
-    // 3b) 插值精度自证：8 个抽样点全量算路 vs 模型估计
-    let accuracy: AnalysisResult['accuracy'];
-    try {
-      const sb = [15, 60, 105, 150, 195, 240, 285, 330];
-      const real = await chain.routeMatrix(
-        state.center,
-        sb.map((b) => destination(state.center, b, probeM * 0.6))
-      );
-      const realProbes = real.value
-        .map((p, i) => ({ bearing: sb[i], straightM: probeM * 0.6, distM: p && p.ok ? p.distM : 0 }))
-        .filter((p) => p.distM > 0);
-      accuracy = interpolationAccuracy(
-        state.center,
-        realProbes,
-        (theta) => interpAngle(model.factors, dirs, theta),
-        persona.speed
-      );
-      if (accuracy.samples > 0) {
-        stepUsage.push({
-          name: '插值精度自证',
-          usage: { channel: real.channel, ms: real.ms, note: `MAE ${accuracy.maeMinutes} 分钟（${accuracy.maePercent}%）` }
-        });
-      }
-    } catch {
-      /* 精度自证失败不影响主流程 */
-    }
-
-    // 4) POI 检索
-    hud.doing(3, '民生设施分类检索…');
-    const { pois, failedCategories, poiSearch, quotaExhausted, usedMock: poiUsedMock, poiOk } = await searchAllCategories(
-      chain,
-      (note) => hud.note(note),
-      stepUsage
-    );
-    // №9 人工补录住宅样本并入采样（名称带(补录)后缀；来源标记 client）
-    const supps = supplementPois(state.center, THRESHOLDS.searchRadiusM);
-    for (const s of supps) {
-      pois.push({ uid: `supp-${s.lat}-${s.lng}`, name: s.name, lat: s.lat, lng: s.lng, category: 'residential', source: 'client', address: '人工补录' } as Poi);
-    }
-    if (supps.length) {
-      stepUsage.push({ name: '住宅样本补录并入', usage: { channel: 'client', ms: 0, note: `${supps.length} 条人工补录` } });
-    }
-    // №11 行政边界：范围外样本与设施不参与统计（评分规则本身不变）
-    const boundary = getBoundary();
-    if (boundary) {
-      const beforeN = pois.length;
-      const kept = pois.filter((p) => pointInBoundary({ lat: p.lat, lng: p.lng }, boundary));
-      pois.length = 0;
-      pois.push(...kept);
-      stepUsage.push({ name: '行政边界筛选', usage: { channel: 'server', ms: 0, note: `边界「${boundary.name}」内样本 ${pois.length}/${beforeN} 条` } });
-    }
-    hud.done(3, 'server', 0);
-
-    // 5) 盲区识别 + 评分 + 清单 + 累积机会（失败类别按「无法判断」贯通）
-    hud.doing(4, '人口加权盲区聚合 · 四维评分');
-    const unavailable = assessmentUnavailableCategories(failedCategories, poiSearch);
-    const gap = analyzeGaps(field, unavailable.includes('residential') ? pois.filter((p) => p.category !== 'residential') : pois,
-      { failedCategories: unavailable });
-    if (unavailable.some((category) => ['market', 'pharmacy', 'primarySchool', 'residential'].includes(category))) {
-      gap.coverageShare = null;
-      gap.severeShare = null;
-      gap.coverageUnavailable = true;
-    }
-    const score = computeScore(state.center, pois, gap, { failedCategories: unavailable });
-    const checklist = buildChecklist(state.center, pois, { failedCategories: unavailable });
-    const cumulative = cumulativeOpportunities(field, pois, state.minutes);
-    hud.done(4, 'server', 0);
-
-    // 6) 补点规划
-    hud.doing(5, '贪心最大覆盖求解补点位置');
-    const planSites = planFacilitiesFromCoverage(gap, gap.coveredMasks, field, persona.speed, {
-      unknownCategories: unavailable
-    });
-    hud.done(5, 'server', 0);
-
-    // 7) 过街设施扫描（可选）
-    hud.doing(6);
-    let crossings: { stats: CrossingStats; segments: CrossingSegment[] } | null = null;
-    if (!quotaExhausted && (document.getElementById('ly-cross') as HTMLInputElement).checked) {
-      crossings = await scanCrossings(chain, state.center, probeM, stepUsage);
-    }
-    hud.done(6, 'server', 0);
-
-    // 警告：与共享引擎同一生成器，区分「数据缺失」「模型合成」「真实结论」
-    const warnings = buildAnalysisWarnings({
-      okProbes,
-      degradedDirs: model.degradedDirs,
-      probes: rm.value,
-      probeStraightM: probeM,
-      failedCategories,
-      totalWeight: gap.totalWeight,
-      poiOk
-    });
-    warnings.push(...poiSearchWarnings(poiSearch));
-    if (boundary) {
-      warnings.unshift(`已导入行政边界「${boundary.name}」（${boundary.vertexCount} 顶点）：仅统计边界内的采样与设施，范围外不参与统计；边界数据来自用户导入，准确性以数据源为准。`);
-    }
-    if (supps.length) {
-      warnings.push(`含人工补录住宅样本 ${supps.length} 条（来源为用户自填，名称带(补录)后缀），已并入住宅采样与覆盖率；真实人口口径未接入（无普查数据），不与样本口径混用。`);
-    }
-    if (accuracy && accuracy.samples > 0 && accuracy.maePercent >= 30) {
-      warnings.push(`插值精度自证误差偏高（MAE ${accuracy.maeMinutes} 分钟 / ${accuracy.maePercent}%，最大 ${accuracy.worstPercent}%）：高误差扇区（多为强阻隔方向）的时间场估计偏差较大，相关圈内结论建议实地核验后再用于决策。`);
-    }
-    if (quotaExhausted) warnings.unshift('已停止后续检索与过街扫描，避免继续消耗配额。');
-    const generatedAt = new Date().toISOString();
-    const mock = pre.channel === 'mock' || rm.channel === 'mock' || poiUsedMock;
-
-    // 渲染
-    const result: AnalysisResult = {
+    const result = await computeReport(chain, {
       center: state.center,
-      centerName: state.centerName || `中心点 ${state.center.lat.toFixed(5)},${state.center.lng.toFixed(5)}`,
+      centerName: state.centerName,
       persona: state.persona,
       minutes: state.minutes,
-      generatedAt,
-      provenance: createProvenance({ generatedAt, poiSearch, channels: stepUsage.map((s) => s.usage.channel), mock }),
-      model,
-      field,
-      rings,
-      pois,
-      gap,
-      score,
-      checklist,
-      planSites,
-      cumulative,
-      accuracy,
-      warnings,
-      failedCategories,
-      poiSearch,
-      incompleteCategories: unavailable,
-      assessmentUnavailableCategories: unavailable,
-      incomplete: unavailable.length > 0 || quotaExhausted,
-      quotaExhausted,
-      crossings: crossings?.stats ?? null,
-      crossingSegments: crossings?.segments ?? [],
-      steps: stepUsage,
-      mock
-    };
+      crossingsOn: (document.getElementById('ly-cross') as HTMLInputElement).checked,
+      stepUsage,
+      onStep: (i, detail) => hud.doing(i, detail),
+      onStepDone: (i, ch, ms) => hud.done(i, ch, ms),
+      onNote: (s) => hud.note(s)
+    });
     state.result = result;
 
     setResult(result);
     drawResult(result);
     switchTab('report');
     projects?.analysisCompleted();
-    hud.note(`完成：总分 ${score.total}（${score.grade}），发现 ${gap.patches.length} 个灰色区域，给出 ${planSites.length} 条补点建议`);
+    hud.note(`完成：总分 ${result.score.total}（${result.score.grade}），发现 ${result.gap.patches.length} 个灰色区域，给出 ${result.planSites.length} 条补点建议`);
     void fetch('/api/baidu/usage').then((res) => res.json()).then((data) => {
       const u = data?.usage;
       if (u) hud.note(`今日上游请求 ${u.requests.total}${u.dailyBudget > 0 ? `/${u.dailyBudget}` : ''} · 缓存命中 ${u.cacheHits} · 本地进程计数，非平台账户余额${u.overBudget ? ' · 已触顶暂停' : ''}`);
@@ -683,6 +546,210 @@ async function analyze() {
     window.dispatchEvent(new CustomEvent('lc:busy', { detail: false }));
     updateChannelCard();
   }
+}
+
+// ---------- 纯计算核心：无 DOM/HUD/state 依赖，供主流程与人群对比复用 ----------
+
+interface ComputeOpts {
+  center: LatLng;
+  centerName: string;
+  persona: PersonaId;
+  minutes: number;
+  crossingsOn: boolean;
+  stepUsage: AnalysisResult['steps'];
+  onStep?: (idx: number, detail?: string) => void;
+  onStepDone?: (idx: number, channel: ChannelName, ms: number) => void;
+  onNote?: (s: string) => void;
+}
+
+async function computeReport(chain: GatewayChain, opts: ComputeOpts): Promise<AnalysisResult> {
+  const { center, centerName, minutes, stepUsage } = opts;
+  const persona = PERSONA_MAP[opts.persona];
+  const stepUsageOut = stepUsage;
+  window.__LC_CENTER__ = center;
+  window.__LC_MOCK_CTX__ = { minutes, speed: persona.speed };
+  const doing = (i: number, d?: string) => opts.onStep?.(i, d);
+  const done = (i: number, ch: ChannelName, ms: number) => opts.onStepDone?.(i, ch, ms);
+  const note = (s: string) => opts.onNote?.(s);
+
+  // 2) 扇形采样批量算路：先用 2 个探针预检通道健康度——
+  //    服务端可用走 48 向批量；否则降为 16 向逐向 SDK 算路（预检探针复用为正北/正南方向）
+  doing(1, `路网探针 · 探测半径 ${Math.round(minutes * persona.speed)}m`);
+  const probeM = minutes * persona.speed;
+  const pre = await chain.routeMatrix(center, [
+    destination(center, 0, probeM),
+    destination(center, 180, probeM)
+  ]);
+  const useServer = pre.channel === 'server';
+  const dirs = useServer ? THRESHOLDS.sampleDirs : 16;
+  const dests = makeProbeDestinations(center, dirs, probeM);
+  const probes: (RouteProbe | null)[] = new Array(dirs).fill(null);
+  probes[0] = pre.value[0];
+  probes[useServer ? 24 : 8] = pre.value[1];
+  const restIdx = probes.map((v, i) => (v === null ? i : -1)).filter((i) => i >= 0);
+  const rm = await chain.routeMatrix(
+    center,
+    restIdx.map((i) => dests[i])
+  );
+  restIdx.forEach((idx, k) => {
+    probes[idx] = rm.value[k];
+  });
+  const okProbes = probes.filter((p) => p && p.ok).length;
+  stepUsageOut.push({
+    name: '路网采样算路',
+    usage: { channel: rm.channel, ms: pre.ms + rm.ms, note: `${okProbes}/${dirs} 向成功` }
+  });
+  done(1, rm.channel, pre.ms + rm.ms);
+
+  // 3) 等时圈模型 + 时间场 + 等时环
+  doing(2, '空间插值生成连续步行时间场');
+  const model = buildIsochroneModel(center, probes, {
+    dirs,
+    minutes,
+    speed: persona.speed,
+    probeM
+  });
+  const field = buildTimeField(model);
+  const levels = [5, 10, minutes].filter((v, i, a) => a.indexOf(v) === i).sort((a, b) => a - b);
+  const rings = levels.map((level) => ({ level, lines: contourPolylines(field, level) }));
+  done(2, 'server', 0);
+
+  // 3b) 插值精度自证：8 个抽样点全量算路 vs 模型估计
+  let accuracy: AnalysisResult['accuracy'];
+  try {
+    const sb = [15, 60, 105, 150, 195, 240, 285, 330];
+    const real = await chain.routeMatrix(
+      center,
+      sb.map((b) => destination(center, b, probeM * 0.6))
+    );
+    const realProbes = real.value
+      .map((p, i) => ({ bearing: sb[i], straightM: probeM * 0.6, distM: p && p.ok ? p.distM : 0 }))
+      .filter((p) => p.distM > 0);
+    accuracy = interpolationAccuracy(
+      center,
+      realProbes,
+      (theta) => interpAngle(model.factors, dirs, theta),
+      persona.speed
+    );
+    if (accuracy.samples > 0) {
+      stepUsageOut.push({
+        name: '插值精度自证',
+        usage: { channel: real.channel, ms: real.ms, note: `MAE ${accuracy.maeMinutes} 分钟（${accuracy.maePercent}%）` }
+      });
+    }
+  } catch {
+    /* 精度自证失败不影响主流程 */
+  }
+
+  // 4) POI 检索
+  doing(3, '民生设施分类检索…');
+  const { pois, failedCategories, poiSearch, quotaExhausted, usedMock: poiUsedMock, poiOk } = await searchAllCategories(
+    chain,
+    note,
+    stepUsageOut
+  );
+  // №9 人工补录住宅样本并入采样（名称带(补录)后缀；来源标记 client）
+  const supps = supplementPois(center, THRESHOLDS.searchRadiusM);
+  for (const s of supps) {
+    pois.push({ uid: `supp-${s.lat}-${s.lng}`, name: s.name, lat: s.lat, lng: s.lng, category: 'residential', source: 'client', address: '人工补录' } as Poi);
+  }
+  if (supps.length) {
+    stepUsageOut.push({ name: '住宅样本补录并入', usage: { channel: 'client', ms: 0, note: `${supps.length} 条人工补录` } });
+  }
+  // №11 行政边界：范围外样本与设施不参与统计（评分规则本身不变）
+  const boundary = getBoundary();
+  if (boundary) {
+    const beforeN = pois.length;
+    const kept = pois.filter((p) => pointInBoundary({ lat: p.lat, lng: p.lng }, boundary));
+    pois.length = 0;
+    pois.push(...kept);
+    stepUsageOut.push({ name: '行政边界筛选', usage: { channel: 'server', ms: 0, note: `边界「${boundary.name}」内样本 ${pois.length}/${beforeN} 条` } });
+  }
+  done(3, 'server', 0);
+
+  // 5) 盲区识别 + 评分 + 清单 + 累积机会（失败类别按「无法判断」贯通）
+  doing(4, '人口加权盲区聚合 · 四维评分');
+  const unavailable = assessmentUnavailableCategories(failedCategories, poiSearch);
+  const gap = analyzeGaps(field, unavailable.includes('residential') ? pois.filter((p) => p.category !== 'residential') : pois,
+    { failedCategories: unavailable });
+  if (unavailable.some((category) => ['market', 'pharmacy', 'primarySchool', 'residential'].includes(category))) {
+    gap.coverageShare = null;
+    gap.severeShare = null;
+    gap.coverageUnavailable = true;
+  }
+  const score = computeScore(center, pois, gap, { failedCategories: unavailable });
+  const checklist = buildChecklist(center, pois, { failedCategories: unavailable });
+  const cumulative = cumulativeOpportunities(field, pois, minutes);
+  done(4, 'server', 0);
+
+  // 6) 补点规划
+  doing(5, '贪心最大覆盖求解补点位置');
+  const planSites = planFacilitiesFromCoverage(gap, gap.coveredMasks, field, persona.speed, {
+    unknownCategories: unavailable
+  });
+  done(5, 'server', 0);
+
+  // 7) 过街设施扫描（可选）
+  doing(6);
+  let crossings: { stats: CrossingStats; segments: CrossingSegment[] } | null = null;
+  if (!quotaExhausted && opts.crossingsOn) {
+    crossings = await scanCrossings(chain, center, probeM, stepUsageOut);
+  }
+  done(6, 'server', 0);
+
+  // 警告：与共享引擎同一生成器，区分「数据缺失」「模型合成」「真实结论」
+  const warnings = buildAnalysisWarnings({
+    okProbes,
+    degradedDirs: model.degradedDirs,
+    probes: rm.value,
+    probeStraightM: probeM,
+    failedCategories,
+    totalWeight: gap.totalWeight,
+    poiOk
+  });
+  warnings.push(...poiSearchWarnings(poiSearch));
+  if (boundary) {
+    warnings.unshift(`已导入行政边界「${boundary.name}」（${boundary.vertexCount} 顶点）：仅统计边界内的采样与设施，范围外不参与统计；边界数据来自用户导入，准确性以数据源为准。`);
+  }
+  if (supps.length) {
+    warnings.push(`含人工补录住宅样本 ${supps.length} 条（来源为用户自填，名称带(补录)后缀），已并入住宅采样与覆盖率；真实人口口径未接入（无普查数据），不与样本口径混用。`);
+  }
+  if (accuracy && accuracy.samples > 0 && accuracy.maePercent >= 30) {
+    warnings.push(`插值精度自证误差偏高（MAE ${accuracy.maeMinutes} 分钟 / ${accuracy.maePercent}%，最大 ${accuracy.worstPercent}%）：高误差扇区（多为强阻隔方向）的时间场估计偏差较大，相关圈内结论建议实地核验后再用于决策。`);
+  }
+  if (quotaExhausted) warnings.unshift('已停止后续检索与过街扫描，避免继续消耗配额。');
+  const generatedAt = new Date().toISOString();
+  const mock = pre.channel === 'mock' || rm.channel === 'mock' || poiUsedMock;
+
+  return {
+    center,
+    centerName: centerName || `中心点 ${center.lat.toFixed(5)},${center.lng.toFixed(5)}`,
+    persona: opts.persona,
+    minutes,
+    generatedAt,
+    provenance: createProvenance({ generatedAt, poiSearch, channels: stepUsageOut.map((s) => s.usage.channel), mock }),
+    model,
+    field,
+    rings,
+    pois,
+    gap,
+    score,
+    checklist,
+    planSites,
+    cumulative,
+    accuracy,
+    warnings,
+    failedCategories,
+    poiSearch,
+    incompleteCategories: unavailable,
+    assessmentUnavailableCategories: unavailable,
+    incomplete: unavailable.length > 0 || quotaExhausted,
+    quotaExhausted,
+    crossings: crossings?.stats ?? null,
+    crossingSegments: crossings?.segments ?? [],
+    steps: stepUsageOut,
+    mock
+  };
 }
 
 async function searchAllCategories(

@@ -220,6 +220,23 @@ table.tbl.comparison-table th, table.tbl.comparison-table td { padding: 8px 4px;
 .rpt-meta + .rpt-meta { margin-top: 4px; padding-top: 0; border-top: none; }
 .rpt-warn-list { margin: 2px 0 0; padding-left: 18px; }
 .rpt-warn-list li { margin: 2px 0; }
+.pcmp-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pcmp { border: 1px solid var(--line); border-radius: var(--radius-s); padding: 10px; background: #fafbfd; }
+.pcmp.current { border-color: var(--accent); background: var(--accent-soft); }
+.pcmp-name { font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+.pcmp-score { display: flex; align-items: baseline; gap: 6px; }
+.pcmp-score b { font-size: 26px; line-height: 1; }
+.pcmp-score span { font-size: 12px; color: var(--ink-2); }
+.pcmp-meta { font-size: 11.5px; color: var(--ink-2); margin-top: 6px; line-height: 1.7; }
+.rpt-verdict { margin-top: 10px; padding: 8px 10px; border-radius: var(--radius-s); background: var(--accent-soft); font-size: 13px; font-weight: 600; color: var(--accent-deep); }
+.plan-gain { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 6px 0; font-size: 12px; color: var(--ink-2); }
+.plan-gain b { color: var(--accent-deep); }
+.rank-bars { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.rank-bar-row { display: grid; grid-template-columns: 110px 1fr 30px; align-items: center; gap: 8px; font-size: 12px; }
+.rank-bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+.rank-bar-track { height: 12px; border-radius: 6px; background: #eef1f6; overflow: hidden; }
+.rank-bar-fill { display: block; height: 100%; border-radius: 6px; }
+.rank-bar-score { font-variant-numeric: tabular-nums; text-align: right; }
 .grade-circle {
   width: 78px; height: 78px; border-radius: 50%; display: flex; flex-direction: column;
   align-items: center; justify-content: center; color: #fff; flex: 0 0 auto;

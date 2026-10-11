@@ -126,10 +126,14 @@ export function PlanPanel({ r }: { r: AnalysisResult | null }) {
           {sites.map((s) => (
             <div className="plan-card" key={siteId(s)}>
               <h4><span className="rank">{s.rank}</span> 建议补建「{catName(s.category)}」<Tag className="gain-chip">+{Math.round((s.afterPct - s.beforePct) * 10) / 10}pp</Tag></h4>
+              <div className="plan-gain">
+                <span>新覆盖 <b>{s.coveredCells}</b> 个居住网格</span>
+                <span>该类覆盖率 <b>{s.beforePct}%→{s.afterPct}%</b></span>
+                <span>服务盘折算 ≈ <b>{s.estWalkMin}</b> 分钟步行</span>
+              </div>
               <div>{s.rationale}</div>
               <div className="plan-meta">
                 <span>坐标 {s.latLng.lat.toFixed(5)}, {s.latLng.lng.toFixed(5)}</span>
-                <span>服务盘折算 ≈ {s.estWalkMin} 分钟步行</span>
               </div>
               <div className="plan-loc">
                 <FlyBtn lat={s.latLng.lat} lng={s.latLng.lng} />
