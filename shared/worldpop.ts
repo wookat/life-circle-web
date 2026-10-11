@@ -1,5 +1,5 @@
-import type { LatLng } from '../../shared/types.js';
-import { simplifyLine } from '../../shared/timefield.js';
+import type { LatLng } from './types.js';
+import { simplifyLine } from './timefield.js';
 
 /**
  * WorldPop 开放人口栅格兜底口径。

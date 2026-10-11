@@ -38,6 +38,7 @@ import { assessmentUnavailableCategories, poiSearchWarnings, unqueriedPoiSearch,
 import type { CrossingSegment, CrossingStats, PoiSearchCompleteness } from '../../shared/types.js';
 import { sampleTimeNearest } from '../../shared/timefield.js';
 import { slimShareReport } from '../../shared/sharePayload.js';
+import { worldPopCoverage } from '../../shared/worldpop.js';
 import { getCachedRoute, setCachedRoute, routeCacheKey } from '../routeCache.js';
 import type { ProjectSnapshot } from '../projects.js';
 import { openPrintableReport, downloadText, facilityCsv } from '../exports.js';
@@ -734,19 +735,21 @@ async function computeReport(chain: GatewayChain, opts: ComputeOpts): Promise<An
     );
     if (ring && ring.length >= 3) {
       try {
-        const r = await fetch(`${API_BASE}api/popcoverage`, {
+        const res = await fetch(`${API_BASE}api/popcoverage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ center, ring, radiusM: persona.speed * minutes })
-        }).then((res) => res.json());
-        if (r?.popCoverage) {
-          popCoverage = r.popCoverage;
-          warnings.push(
-            `人口覆盖率改用 WorldPop 2020 年 100m 人口栅格口径估算：等时圈内常住人口约 ${Math.round(r.popCoverage.popIn).toLocaleString()} / 理想步行圈 ${r.popCoverage.radiusM}m 内约 ${Math.round(r.popCoverage.popEval).toLocaleString()}（住宅 POI 口径不可用，两口径不混用，四维评分仍按住宅口径剔除覆盖维度）`
-          );
-        }
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        popCoverage = (await res.json())?.popCoverage ?? null;
       } catch {
-        /* WorldPop 不可达时保持无法评估 */
+        // 无后端（静态部署）时浏览器直连 WorldPop 公开接口（免密钥、CORS 开放）
+        popCoverage = await worldPopCoverage(center, ring, persona.speed * minutes);
+      }
+      if (popCoverage) {
+        warnings.push(
+          `人口覆盖率改用 WorldPop 2020 年 100m 人口栅格口径估算：等时圈内常住人口约 ${Math.round(popCoverage.popIn).toLocaleString()} / 理想步行圈 ${popCoverage.radiusM}m 内约 ${Math.round(popCoverage.popEval).toLocaleString()}（住宅 POI 口径不可用，两口径不混用，四维评分仍按住宅口径剔除覆盖维度）`
+        );
       }
     }
   }

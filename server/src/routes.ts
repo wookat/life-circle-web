@@ -7,7 +7,7 @@ import { buckets, callBaidu } from './baidu.js';
 import { analyzeWithServerProvider } from './provider.js';
 import { startStreetBatch, getJob, cancelJob, sweepJobs, listJobs, resumeStreetBatch } from './batch.js';
 import { escapeHtml as esc, getShare, saveShare } from './share.js';
-import { worldPopCoverage } from './worldpop.js';
+import { worldPopCoverage } from '../../shared/worldpop.js';
 import { PERSONAS } from '../../shared/config.js';
 import type { AnalysisReport } from '../../shared/analyze.js';
 import type { LatLng } from '../../shared/types.js';
