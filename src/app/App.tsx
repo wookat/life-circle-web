@@ -9,14 +9,14 @@ import { PanelBody } from './PanelBody.js';
 import { init, ui } from './controller.js';
 
 const TABS = [
-  { key: 'report', label: '体检报告' },
-  { key: 'checklist', label: '对标清单' },
-  { key: 'gaps', label: '灰色区域' },
-  { key: 'plan', label: '规划建议' },
-  { key: 'compare', label: '方案对比' },
-  { key: 'street', label: '街道体检' },
-  { key: 'log', label: '运行日志' }
-].map((t) => ({ ...t, label: <span data-tab={t.key}>{t.label}</span> }));
+  { key: 'report', label: '报告', title: '体检报告' },
+  { key: 'checklist', label: '对标', title: '对标清单' },
+  { key: 'gaps', label: '灰区', title: '灰色区域' },
+  { key: 'plan', label: '规划', title: '规划建议' },
+  { key: 'compare', label: '对比', title: '方案对比' },
+  { key: 'street', label: '街道', title: '街道体检' },
+  { key: 'log', label: '日志', title: '运行日志' }
+].map((t) => ({ ...t, label: <span data-tab={t.key} title={t.title}>{t.label}</span> }));
 
 export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
