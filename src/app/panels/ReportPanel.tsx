@@ -114,10 +114,15 @@ export function ReportPanel({ r, correctionsCount }: { r: AnalysisResult | null;
               {PERSONA_ORDER.map((pid) => {
                 const pr = compare[pid];
                 const cur = pid === r.persona;
+                // 检索失败/配额耗尽拿到的空样本会算出「0 处 / 低分」假结论——必须显式标不可用
+                const unreliable = !!pr && (pr.quotaExhausted || pr.pois.length === 0);
                 return (
                   <div className={`pcmp${cur ? ' current' : ''}`} key={pid}>
                     <div className="pcmp-name">{PERSONA_MAP[pid].name}{cur && <Tag className="pill ok" style={{ marginLeft: 4 }}>当前</Tag>}</div>
                     {pr ? (
+                      unreliable ? (
+                        <div className="pcmp-meta" style={{ color: 'var(--warn)' }}>检索数据不足，结论不可用</div>
+                      ) : (
                       <>
                         <div className="pcmp-score" style={{ color: GRADE_COLOR[pr.score.grade] ?? '#666' }}>
                           <b>{pr.score.grade}</b><span>{pr.score.total} 分</span>
@@ -127,6 +132,7 @@ export function ReportPanel({ r, correctionsCount }: { r: AnalysisResult | null;
                           人口覆盖率 {pr.score.coverageUnavailable ? (pr.popCoverage ? `${Math.round(pr.popCoverage.share * 100)}（栅格口径）` : '无法评估') : `${Math.round((pr.score.dims.coverage ?? 0) * 100)}`}
                         </div>
                       </>
+                      )
                     ) : (
                       <div className="pcmp-meta" style={{ color: 'var(--warn)' }}>该人群分析失败</div>
                     )}
@@ -135,10 +141,11 @@ export function ReportPanel({ r, correctionsCount }: { r: AnalysisResult | null;
               })}
             </div>
             {(() => {
-              const scores = PERSONA_ORDER.map((p2) => compare[p2]?.score.total).filter((v): v is number => typeof v === 'number');
+              const usable = (p2: PersonaId) => { const q = compare[p2]; return q && !q.quotaExhausted && q.pois.length > 0 ? q : undefined; };
+              const scores = PERSONA_ORDER.map((p2) => usable(p2)?.score.total).filter((v): v is number => typeof v === 'number');
               if (scores.length < 2) return null;
               const spread = Math.max(...scores) - Math.min(...scores);
-              const worst = PERSONA_ORDER.find((p2) => compare[p2]?.score.total === Math.min(...scores));
+              const worst = PERSONA_ORDER.find((p2) => usable(p2)?.score.total === Math.min(...scores));
               return (
                 <div className="rpt-sub" style={{ marginTop: 8 }}>
                   同一点位人群极差 <b>{spread} 分</b>{spread >= 15 && worst && <>——<b>{PERSONA_MAP[worst].name}</b>群体服务可达性明显更差，适老化/适幼化改造应优先</>}。
