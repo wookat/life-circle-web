@@ -111,9 +111,9 @@
 
 ### 演示视频
 
-[![圈点·核心功能演示](docs/data/screenshots/A-adult.png)](docs/video/圈点-核心功能演示-v3.mp4)
+[![圈点·核心功能演示](docs/data/screenshots/A-adult.png)](docs/video/圈点-核心功能演示-v4.mp4)
 
-▶ [docs/video/圈点-核心功能演示-v3.mp4](docs/video/圈点-核心功能演示-v3.mp4)（2 分 36 秒，配音叙事版：
+▶ [docs/video/圈点-核心功能演示-v4.mp4](docs/video/圈点-核心功能演示-v4.mp4)（2 分 46 秒，配音叙事版：
 章节卡 + 真实界面实录 + TTS 旁白，按「诊断 → 处方 → 验证」动线展开——
 定位体检、决策摘要、三人群公平性对比、补点收益、MAE 与 WorldPop 自证。
 分镜脚本见 [docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)。）
