@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/nghqqa/life-circle-15min/actions/workflows/ci.yml"><img src="https://github.com/nghqqa/life-circle-15min/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/license-MIT-2f6fed" alt="License: MIT">
+  <a href="https://github.com/wookat/life-circle-web/actions/workflows/ci.yml"><img src="https://github.com/wookat/life-circle-web/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2f6fed" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/node-%E2%89%A520-2f6fed" alt="Node ≥ 20">
   <img src="https://img.shields.io/badge/%E7%99%BE%E5%BA%A6%E5%9C%B0%E5%9B%BE-GL%20JS%20API%20%2B%20Web%20API-2932e1" alt="百度地图 GL JS API + Web API">
 </p>
