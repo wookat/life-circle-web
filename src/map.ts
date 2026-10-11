@@ -1,5 +1,6 @@
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import { CATEGORY_MAP } from '../shared/config.js';
 import { simplifyLine } from '../shared/timefield.js';
 import type { CrossingSegment, GapPatch, LatLng, PlanSite, Poi } from '../shared/types.js';
@@ -195,13 +196,16 @@ export class MapView {
     const host = document.createElement('div');
     const root = createRoot(host);
     this.popRoot = root;
-    root.render(createElement(PoiPop, {
-      name: p.name,
-      category: categoryName,
-      address: p.address ?? '',
-      uid: p.uid,
-      act: (ds) => (window as unknown as { __lcPoiAct?: (d: Record<string, string>) => void }).__lcPoiAct?.(ds)
-    }));
+    // 同步提交后再开弹窗：异步 render 时 BMapGL 量到的高度太小，按钮区会被裁
+    flushSync(() => {
+      root.render(createElement(PoiPop, {
+        name: p.name,
+        category: categoryName,
+        address: p.address ?? '',
+        uid: p.uid,
+        act: (ds) => (window as unknown as { __lcPoiAct?: (d: Record<string, string>) => void }).__lcPoiAct?.(ds)
+      }));
+    });
     const info = new BMapGL.InfoWindow(host, { width: 320 });
     // close 只卸载自己那个 root：openInfoWindow 会先关掉旧弹窗触发其 close，
     // 若按 this.popRoot 卸载会把刚挂上的新 root 一并卸掉（第二个弹窗空白）
@@ -210,6 +214,8 @@ export class MapView {
       root.unmount();
     });
     this.map.openInfoWindow(info, new BMapGL.Point(p.lng, p.lat));
+    // 兜底：样式/字体异步加载导致二次排版时强制重测高度
+    requestAnimationFrame(() => info.redraw?.());
   }
 
   toggleLayer(key: LayerKey, on: boolean) {
