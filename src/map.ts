@@ -124,10 +124,7 @@ export class MapView {
         position: pt,
         offset: new BMapGL.Size(14, -14)
       });
-      lbl.setStyle({
-        background: '#2f6fed', color: '#fff', border: 'none', borderRadius: '6px',
-        padding: '2px 8px', fontSize: '12px'
-      });
+      lbl.setStyle(mapLabelStyle('#2f6fed'));
       this.map.addOverlay(lbl);
       (this as any)._centerLabel = lbl;
     }
@@ -274,10 +271,7 @@ export class MapView {
             position: new BMapGL.Point(north.lng, north.lat),
             offset: new BMapGL.Size(-38, -16)
           });
-          lbl.setStyle({
-            background: 'rgba(255,255,255,0.92)', color: st.color, border: `1px solid ${st.color}`,
-            borderRadius: '6px', padding: '1px 7px', fontSize: '11px', fontWeight: '600', whiteSpace: 'nowrap'
-          });
+          lbl.setStyle(mapLabelStyle(st.color));
           map.addOverlay(lbl);
           this.overlays.rings.push(lbl);
         }
@@ -347,10 +341,7 @@ export class MapView {
           `#${patch.id} ${patch.severity === 'severe' ? '重度' : '中度'}缺${catName(patch.dominant)} · ${(patch.weightShare * 100).toFixed(0)}%居住`,
           { position: new BMapGL.Point(patch.centroid.lng, patch.centroid.lat), offset: new BMapGL.Size(-60, -10) }
         );
-        label.setStyle({
-          background: color, color: '#fff', border: 'none', borderRadius: '6px',
-          padding: '2px 8px', fontSize: '11px', whiteSpace: 'nowrap'
-        });
+        label.setStyle(mapLabelStyle(color));
         map.addOverlay(label);
         this.overlays.gap.push(label);
       }
@@ -383,10 +374,7 @@ export class MapView {
           position: new BMapGL.Point(site.latLng.lng, site.latLng.lat + 0.0093),
           offset: new BMapGL.Size(-52, -6)
         });
-        lbl.setStyle({
-          background: 'rgba(255,255,255,0.92)', color: '#0097a7', border: '1px solid #00bcd4',
-          borderRadius: '6px', padding: '1px 7px', fontSize: '11px', whiteSpace: 'nowrap'
-        });
+        lbl.setStyle(mapLabelStyle('#00bcd4'));
         map.addOverlay(lbl);
         this.overlays.plan.push(lbl);
       }
@@ -456,6 +444,15 @@ function iconCenter(): any {
     anchor: new BMapGL.Size(size / 2, size / 2),
     imageSize: new BMapGL.Size(size, size)
   });
+}
+
+/** 地图标注统一样式令牌：白底彩边小卡片，颜色随图层语义 */
+function mapLabelStyle(color: string) {
+  return {
+    background: 'rgba(255,255,255,0.92)', color, border: `1px solid ${color}`,
+    borderRadius: '6px', padding: '1px 7px', fontSize: '11px', fontWeight: '600',
+    whiteSpace: 'nowrap'
+  } as const;
 }
 
 function iconFor(color: string, glyph: string, size = 26): any {

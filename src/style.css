@@ -184,11 +184,8 @@ html { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
   background: var(--card); border: 1px solid var(--line-2); border-radius: var(--radius-s);
   padding: 4px; font-size: 13px;
 }
-#ctx-menu button {
-  display: block; width: 100%; border: none; background: none; text-align: left;
-  padding: 7px 10px; border-radius: 6px; font-size: 13px; font-family: var(--font); color: var(--ink); cursor: pointer;
-}
-#ctx-menu button:hover { background: var(--accent-soft); color: var(--accent); }
+#ctx-menu .ant-menu { border: none; background: transparent; padding: 0; }
+#ctx-menu .ant-menu-item { height: 32px; line-height: 32px; border-radius: 6px; }
 
 /* ---------- 右侧面板 ---------- */
 #panel {

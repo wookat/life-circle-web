@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button, Checkbox, Input, Modal, Segmented, Select, Tabs } from 'antd';
-import { AimOutlined, EnvironmentOutlined, FileTextOutlined, QuestionCircleOutlined, SearchOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { Button, Checkbox, Input, Menu, Modal, Segmented, Select, Tabs } from 'antd';
+import { AimOutlined, EnvironmentOutlined, FileTextOutlined, LeftOutlined, QuestionCircleOutlined, RightOutlined, SearchOutlined, ShareAltOutlined } from '@ant-design/icons';
 import { banner, getBannerView, getHudView, CHANNEL_LABEL, type BannerView, type HudView } from '../hud.js';
 import { CATEGORIES } from '../../shared/config.js';
 import { render as renderPanel } from '../panels.js';
@@ -184,11 +184,11 @@ export default function App() {
             <Segmented value={mapType} onChange={(v) => { const m = v as '2d' | 'satellite' | '3d'; setMapType(m); ui.setMapType(m); }}
               options={[{ value: '2d', label: '平面' }, { value: 'satellite', label: '卫星' }, { value: '3d', label: '3D' }]} />
           </div>
-          <button id="edge-left" className="edge-toggle edge-left" title="折叠左侧栏" aria-label="折叠左侧栏" onClick={() => collapseRef.current?.('left')}>◀</button>
-          <button id="edge-right" className="edge-toggle edge-right" title="折叠右侧报告栏" aria-label="折叠右侧报告栏" onClick={() => collapseRef.current?.('right')}>▶</button>
-          <div id="ctx-menu" className="hidden" onClick={(e) => { const act = (e.target as HTMLElement).dataset.act; if (act) ui.ctxAction(act); }}>
-            <button data-act="center">设为中心点</button>
-            <button data-act="analyze">设为中心点并体检</button>
+          <button id="edge-left" className="edge-toggle edge-left" title="折叠左侧栏" aria-label="折叠左侧栏" onClick={() => collapseRef.current?.('left')}><LeftOutlined /></button>
+          <button id="edge-right" className="edge-toggle edge-right" title="折叠右侧报告栏" aria-label="折叠右侧报告栏" onClick={() => collapseRef.current?.('right')}><RightOutlined /></button>
+          <div id="ctx-menu" className="hidden">
+            <Menu selectable={false} mode="vertical" onClick={({ key }) => ui.ctxAction(key)}
+              items={[{ key: 'center', label: '设为中心点' }, { key: 'analyze', label: '设为中心点并体检' }]} />
           </div>
           <div id="map-placeholder" className="hidden">
             <div className="ph-box">
