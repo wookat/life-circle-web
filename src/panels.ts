@@ -51,7 +51,7 @@ export function displayedPlanSites(): PlanSite[] {
 }
 
 // ---- 街道批量体检状态 ----
-interface StreetCommunity {
+export interface StreetCommunity {
   name: string;
   center: LatLng;
   score: number;
@@ -63,7 +63,11 @@ interface StreetCommunity {
 }
 let streetJobId: string | null = null;
 let streetPollTimer: ReturnType<typeof setInterval> | null = null;
-let streetLastSnapshot: { status: string; done: number; total: number; current: string; communities: StreetCommunity[]; summary: any; error?: string; persona?: string } | null = null;
+export interface StreetSnapshot {
+  status: string; done: number; total: number; current: string;
+  communities: StreetCommunity[]; summary: any; error?: string; persona?: string;
+}
+let streetLastSnapshot: StreetSnapshot | null = null;
 
 export function setResult(r: AnalysisResult | null) {
   if (r !== currentResult) {
@@ -132,90 +136,56 @@ export function render() {
   window.dispatchEvent(new CustomEvent('lc:panel'));
 }
 
-function gradeColor(grade: string): string {
-  return { A: '#2f9e44', B: '#74b816', C: '#f08c00', D: '#e8590c', E: '#e03131' }[grade] ?? '#666';
-}
-
 export function sameRules(r: AnalysisResult): boolean {
   return !!r.provenance && (r.provenance.applicationVersion === APPLICATION_VERSION && r.provenance.ruleVersion === RULE_VERSION &&
     r.provenance.algorithmVersion === ALGORITHM_VERSION && r.provenance.ruleFingerprint === ruleFingerprint());
 }
 
-function dataQualityHtml(r: AnalysisResult): string {
-  const statuses = { complete: '已取完', truncated: '达到上限', partial: '部分结果', unknown: '总量未知', failed: '检索失败', skipped: '未执行' };
-  const p = r.provenance;
-  const source = p ? `<div class="rpt-sub report-source">
-    报告编号：${escapeHtml(p.reportId)}<br/>
-    版本：${escapeHtml(p.applicationVersion)} · ${escapeHtml(p.algorithmVersion)}<br/>
-    规则：${escapeHtml(p.ruleVersion)} / ${escapeHtml(p.ruleFingerprint)}<br/>
-    数据通道：${p.channels.map((c) => CHANNEL_LABEL[c]).join('、')}；坐标 BD-09；住宅小区作为人口代理。<br/>
-    设施最早采集：${p.poiCollectedAt ? new Date(p.poiCollectedAt).toLocaleString('zh-CN') : '无可用采集记录'}；
-    ${p.poiCacheHits}/${p.poiQueries} 次检索全部命中缓存。路线缓存的原始采集时间暂未记录。
-  </div>` : '<div class="rpt-sub">此报告未记录版本与采集来源，请重新体检以建立完整记录。</div>';
-  const searches = r.poiSearch ?? [];
-  const rows = searches.map((s) => `<tr>
-    <td>${escapeHtml(s.keyword)}<br/><span class="rpt-sub">${CHANNEL_LABEL[s.source]}${s.cacheHit ? ' · 缓存' : ''}</span></td>
-    <td class="num">${s.fetchedCount} / ${s.reportedTotal ?? '未知'}</td>
-    <td><span class="pill ${s.status === 'complete' ? 'ok' : 'mid'}">${statuses[s.status]}</span><br/>
-    <span class="rpt-sub">${s.pagesFetched}/${s.pageLimit} 页</span></td>
-  </tr>`).join('');
-  return `<div class="sec-title">数据完整性与来源</div>
-    ${!sameRules(r) ? '<div class="rpt-summary">此项目的算法或规则与当前版本不同，已保留历史结果。请重新体检后继续规划。</div>' : ''}
-    ${source}
-    <div class="rpt-sub">“已取完”仅表示本次关键词返回结果已取尽，不代表现实设施普查。数量为去重后已取 / 上游原始总数；达到上限时不会继续消耗配额。</div>
-    ${searches.length ? `<table class="tbl data-quality"><thead><tr><th>关键词 / 来源</th><th>已取 / 总数</th><th>检索状态</th></tr></thead><tbody>${rows}</tbody></table>` : ''}`;
-}
-
 // ---------- 街道级批量体检 ----------
 
-async function refreshJobList() {
-  {
-    const el = document.getElementById('street-jobs');
-    if (!el) return;
-    try {
-      const res = await fetch('/api/batch/jobs');
-      const data = await res.json();
-      const jobs: any[] = data.jobs ?? [];
-      if (!jobs.length) { el.textContent = ''; return; }
-      el.innerHTML = '最近任务：' + jobs.slice(0, 3).map((j) => {
-        const label = `${escapeHtml(j.centerName)}（${j.done}/${j.total} · ${j.status === 'running' ? '运行中' : j.status === 'queued' ? '排队中' : j.status === 'interrupted' ? '已中断' : j.status === 'error' ? '失败' : j.status === 'cancelled' ? '已取消' : '完成'}）`;
-        const find = j.status === 'running' || j.status === 'queued'
-          ? `<button class="btn ghost" data-jobfind="${j.id}" style="font-size:12px;padding:2px 6px">找回</button>` : '';
-        const resume = ['interrupted', 'error', 'cancelled'].includes(j.status)
-          ? `<button class="btn ghost" data-jobresume="${j.id}" style="font-size:12px;padding:2px 6px">续跑剩余</button>` : '';
-        return `${label} ${find}${resume}`;
-      }).join(' · ');
-      el.querySelectorAll('[data-jobfind]').forEach((b) => b.addEventListener('click', () => {
-        streetJobId = (b as HTMLElement).dataset.jobfind!;
-        startPolling();
-        banner('已找回该任务，继续轮询进度。', 'info');
-      }));
-      el.querySelectorAll('[data-jobresume]').forEach((b) => b.addEventListener('click', async () => {
-        const id = (b as HTMLElement).dataset.jobresume!;
-        try {
-          const res = await fetch('/api/batch/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: id, mode: 'remaining' }) });
-          const data = await res.json();
-          if (data.status !== 0) { banner(data.message ?? '续跑失败'); return; }
-          streetJobId = data.jobId;
-          startPolling();
-          banner(`续跑已启动：剩余 ${data.total} 个小区，已完成结果沿用。`, 'info');
-        } catch { banner('续跑请求失败，请稍后重试。'); }
-      }));
-    } catch { /* 演示模式无此端点 */ }
-  }
+interface StreetJobItem { id: string; label: string; canFind: boolean; canResume: boolean; }
+let streetJobs: StreetJobItem[] = [];
+let streetUsageText = '';
+
+function emitStreet() {
+  window.dispatchEvent(new CustomEvent('lc:street'));
 }
 
+export interface StreetView {
+  jobs: StreetJobItem[];
+  usageText: string;
+  snap: StreetSnapshot | null;
+  hasJob: boolean;
+}
+
+export function getStreetView(): StreetView {
+  return { jobs: streetJobs, usageText: streetUsageText, snap: streetLastSnapshot, hasJob: !!streetJobId };
+}
+
+async function refreshJobList() {
+  try {
+    const res = await fetch('/api/batch/jobs');
+    const data = await res.json();
+    const jobs: any[] = data.jobs ?? [];
+    streetJobs = jobs.slice(0, 3).map((j) => ({
+      id: j.id,
+      label: `${j.centerName}（${j.done}/${j.total} · ${j.status === 'running' ? '运行中' : j.status === 'queued' ? '排队中' : j.status === 'interrupted' ? '已中断' : j.status === 'error' ? '失败' : j.status === 'cancelled' ? '已取消' : '完成'}）`,
+      canFind: j.status === 'running' || j.status === 'queued',
+      canResume: ['interrupted', 'error', 'cancelled'].includes(j.status),
+    }));
+  } catch { /* 演示模式无此端点 */ }
+  emitStreet();
+}
 /** №13 调用预算面板：本地进程计数（非平台账户余额），预算与命中一目了然 */
 async function refreshUsageLine() {
-  const el = document.getElementById('street-usage');
-  if (!el) return;
   try {
     const res = await fetch('/api/baidu/usage');
     const data = await res.json();
     const u = data.usage;
     if (!u) return;
     const budget = u.dailyBudget > 0 ? `${u.requests.total}/${u.dailyBudget}` : `${u.requests.total}（未设上限）`;
-    el.textContent = `今日上游请求 ${budget}（检索 ${u.requests.place} · 算路 ${u.requests.route} · 编码 ${u.requests.geo}）· 缓存命中 ${u.cacheHits} · 本地进程计数，非平台账户余额${u.overBudget ? ' · 已触顶暂停' : ''}`;
+    streetUsageText = `今日上游请求 ${budget}（检索 ${u.requests.place} · 算路 ${u.requests.route} · 编码 ${u.requests.geo}）· 缓存命中 ${u.cacheHits} · 本地进程计数，非平台账户余额${u.overBudget ? ' · 已触顶暂停' : ''}`;
+    emitStreet();
   } catch { /* 演示模式/离线环境无此端点 */ }
 }
 
@@ -256,100 +226,40 @@ function startPolling() {
 }
 
 function updateStreetStatus() {
-  const el = document.getElementById('street-status');
-  if (!el) return;
-  const s = streetLastSnapshot;
-  if (!streetJobId || !s) {
-    el.innerHTML = '<div class="empty-tip">发起任务后，这里显示进度与街道排名</div>';
-    return;
-  }
-  if (s.status === 'running') {
-    el.innerHTML = `
-    <div class="rpt-summary"><span class="sum-label">进行中</span>${s.done}/${s.total} 完成 · 当前：${escapeHtml(s.current)}
-    <button id="btn-street-cancel" class="btn ghost" style="margin-left:8px;height:26px;padding:0 10px;font-size:12px">取消任务</button></div>
-    ${s.communities.length ? communityTable(s.communities) : ''}`;
-    el.querySelector('#btn-street-cancel')?.addEventListener('click', async () => {
-      if (!streetJobId) return;
-      try {
-        await fetch(`/api/batch/cancel/${streetJobId}`, { method: 'POST' });
-      } catch { /* 轮询会反映最终状态 */ }
-    });
-    return;
-  }
-  if (s.status === 'cancelled') {
-    el.innerHTML = `<div class="rpt-summary"><span class="sum-label" style="color:var(--warn)">已取消</span>任务已停止，已完成的 ${s.done} 个小区结果保留。</div>${communityTable(s.communities)}`;
-    return;
-  }
-  if (s.status === 'error') {
-    // 预算触顶/失败也保留已完成社区结果（可见、可导出），错误文本说明原因
-    el.innerHTML = `<div class="rpt-summary"><span class="sum-label" style="color:var(--bad)">失败</span>${escapeHtml(s.error ?? '未知错误')}</div>${s.communities?.length ? communityTable(s.communities) : ''}`;
-    return;
-  }
-  const sum = s.summary ?? {};
-  const dist = Object.entries(sum.gradeDist ?? {})
-    .map(([g, n]) => `${g} 级 ×${n}`)
-    .join(' · ');
-  const weakRows = (sum.weakList ?? [])
-    .map((w: any) => {
-      const covText = w.coverageShare == null ? '无法评估' : Math.round(w.coverageShare * 100) + '%';
-      return `<tr><td>${escapeHtml(shortName(w.name))}</td><td class="num">${w.score}</td><td class="num">${covText}</td><td>${w.dominantMissing ? CATEGORY_MAP[w.dominantMissing as keyof typeof CATEGORY_MAP]?.name ?? w.dominantMissing : '—'}</td></tr>`;
-    })
-    .join('');
-  el.innerHTML = `
-  <div class="kpi-row">
-    <div class="kpi"><b>${sum.avgScore ?? '—'}</b><span>街道均分${s.persona && s.persona !== 'adult' ? `（${PERSONA_MAP[s.persona as keyof typeof PERSONA_MAP]?.name ?? s.persona}口径）` : ''}</span></div>
-    <div class="kpi"><b>${s.total}</b><span>采样小区</span></div>
-    <div class="kpi"><b>${sum.scoreGap ?? 0}</b><span>最优最差极差</span></div>
-  </div>
-  <div class="rpt-summary"><span class="sum-label">汇总</span>等级分布：${escapeHtml(dist || '—')}；
-  ${sum.best ? `最优 <b>${escapeHtml(shortName(sum.best.name))}（${sum.best.score}）</b>` : ''}
-  ${sum.worst ? `、最差 <b>${escapeHtml(shortName(sum.worst.name))}（${sum.worst.score}）</b>` : ''}。
-  地图上已按等级着色标注各小区。</div>
-  ${(sum.weakList ?? []).length ? `<div class="sec-title">公平性视角 · 薄弱小区清单</div>
-  <table class="tbl"><thead><tr><th>小区</th><th>评分</th><th>覆盖率</th><th>主要缺失</th></tr></thead><tbody>${weakRows}</tbody></table>
-  <div class="rpt-sub">公平性口径：评分 &lt; 75 或人口覆盖率 &lt; 80% 判定为薄弱小区——资源应优先向这些片区倾斜。</div>` : ''}
-  ${(s.summary?.streetGroups ?? []).length ? `<div class="sec-title">城区试点 · 街道分组排名</div>
-  <table class="tbl"><thead><tr><th>街道</th><th>小区数</th><th>均分</th><th>薄弱</th><th>最优</th><th>最差</th></tr></thead>
-  <tbody>${(s.summary?.streetGroups ?? []).map((g: any) => `<tr>
-    <td>${escapeHtml(g.street)}</td><td class="num">${g.count}</td><td class="num"><b>${g.avgScore}</b></td>
-    <td class="num">${g.weakCount || '—'}</td>
-    <td class="num">${g.bestScore}　</td><td class="num">${g.worstScore}</td></tr>`).join('')}</tbody></table>` : ''}
-  ${communityTable(s.communities.filter((c: any) => c.score >= 0))}
-  <button id="btn-weak-csv" class="btn ghost">导出薄弱社区 CSV</button>
-  <div class="rpt-sub">说明：排名为<b>片区抽样口径</b>（采样半径内住宅小区），非行政街道全域普查；小区评分未覆盖时显示「-」；重复发起任务会命中服务端缓存，速度快得多。</div>`;
-  document.getElementById('btn-weak-csv')?.addEventListener('click', () => {
-    try { if (streetJobId) downloadText(weakCommunityCsv(s.communities, streetJobId, new Date().toISOString(), { persona: s.persona, ruleVersion: RULE_VERSION }), '圈点-薄弱社区.csv', 'text/csv;charset=utf-8'); }
+  emitStreet();
+}
+
+/** street 页签动作：找回 / 续跑 / 取消 / 导出薄弱社区 CSV（React 侧绑定） */
+export const streetActions = {
+  findJob(id: string) {
+    streetJobId = id;
+    startPolling();
+    banner('已找回该任务，继续轮询进度。', 'info');
+    emitStreet();
+  },
+  async resumeJob(id: string) {
+    try {
+      const res = await fetch('/api/batch/resume', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: id, mode: 'remaining' }) });
+      const data = await res.json();
+      if (data.status !== 0) { banner(data.message ?? '续跑失败'); return; }
+      streetJobId = data.jobId;
+      startPolling();
+      banner(`续跑已启动：剩余 ${data.total} 个小区，已完成结果沿用。`, 'info');
+    } catch { banner('续跑请求失败，请稍后重试。'); }
+  },
+  async cancel() {
+    if (!streetJobId) return;
+    try { await fetch(`/api/batch/cancel/${streetJobId}`, { method: 'POST' }); }
+    catch { /* 轮询会反映最终状态 */ }
+  },
+  exportWeakCsv() {
+    const s = streetLastSnapshot;
+    try { if (streetJobId && s) downloadText(weakCommunityCsv(s.communities, streetJobId, new Date().toISOString(), { persona: s.persona, ruleVersion: RULE_VERSION }), '圈点-薄弱社区.csv', 'text/csv;charset=utf-8'); }
     catch { banner('薄弱社区表导出失败，任务结果已保留，请重试。', 'warn'); }
-  });
-}
+  },
+};
 
-function communityTable(communities: (StreetCommunity & { coverageUnavailable?: boolean })[]): string {
-  const sorted = [...communities].sort((a, b) => b.score - a.score);
-  const rows = sorted
-    .map((c) => {
-      const covText = c.coverageUnavailable || c.coverageShare == null ? '无法评估' : Math.round(c.coverageShare * 100) + '%';
-      return `<tr>
-      <td>${escapeHtml(shortName(c.name))}</td>
-      <td class="num">${c.score >= 0 ? c.score : '—'}</td>
-      <td>${c.grade === '-' ? '—' : `<span class="pill ${c.grade === 'A' || c.grade === 'B' ? 'ok' : c.grade === 'C' ? 'mid' : 'bad'}">${c.grade}</span>`}</td>
-      <td class="num">${covText}</td>
-      <td>${c.dominantMissing ? CATEGORY_MAP[c.dominantMissing as keyof typeof CATEGORY_MAP]?.name ?? c.dominantMissing : '—'}</td>
-      <td><button class="btn ghost plan-loc" data-fly="${c.center.lat},${c.center.lng}">定位</button></td>
-    </tr>`;
-    })
-    .join('');
-  return `<table class="tbl">
-    <thead><tr><th>小区</th><th>评分</th><th>等级</th><th>覆盖率</th><th>主要缺失</th><th></th></tr></thead>
-    <tbody>${rows}</tbody></table>`;
-}
 
-function shortName(name: string): string {
-  return name.replace(/^江西省上饶市信州区/, '').replace(/^上饶市信州区/, '');
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-}
 
 export type { GapPatch, PlanSite };
 
