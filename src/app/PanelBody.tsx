@@ -4,9 +4,11 @@ import { getPanelView } from '../panels.js';
 import { ReportPanel } from './panels/ReportPanel.js';
 import { ChecklistPanel } from './panels/ChecklistPanel.js';
 import { GapsPanel } from './panels/GapsPanel.js';
+import { PlanPanel } from './panels/PlanPanel.js';
+import { ComparePanel } from './panels/ComparePanel.js';
 
 /** 已迁移到 React+AntD 的页签；panels.render() 对其跳过 innerHTML。 */
-const REACT_TABS = new Set(['report', 'checklist', 'gaps']);
+const REACT_TABS = new Set(['report', 'checklist', 'gaps', 'plan', 'compare']);
 
 type PanelView = ReturnType<typeof getPanelView>;
 
@@ -29,6 +31,8 @@ export function PanelBody() {
       {view.tab === 'report' && <ReportPanel r={view.result} correctionsCount={view.correctionsCount} />}
       {view.tab === 'checklist' && <ChecklistPanel r={view.result} />}
       {view.tab === 'gaps' && <GapsPanel r={view.result} />}
+      {view.tab === 'plan' && <PlanPanel r={view.result} />}
+      {view.tab === 'compare' && <ComparePanel r={view.result} />}
     </>,
     host
   );

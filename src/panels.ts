@@ -506,13 +506,13 @@ function planHtml(r: AnalysisResult): string {
   return parts.join('');
 }
 
-function siteId(s: PlanSite): string {
+export function siteId(s: PlanSite): string {
   return `${s.category}-${s.latLng.lat.toFixed(5)}-${s.latLng.lng.toFixed(5)}`;
 }
 
 /** 依据已采纳/已跳过状态重算当前建议 */
 /** F3：预算按整个当前方案计——剩余数量/剩余预算 = 上限 − 已采纳占用 */
-function remainingBudget(): { maxSites?: number; costPerSiteWan?: number; totalBudgetWan?: number } {
+export function remainingBudget(): { maxSites?: number; costPerSiteWan?: number; totalBudgetWan?: number } {
   const out: { maxSites?: number; costPerSiteWan?: number; totalBudgetWan?: number } = {};
   if (budget.maxSites !== undefined) out.maxSites = Math.max(0, budget.maxSites - acceptedSites.length);
   if (budget.costPerSiteWan !== undefined) out.costPerSiteWan = budget.costPerSiteWan;
@@ -523,14 +523,14 @@ function remainingBudget(): { maxSites?: number; costPerSiteWan?: number; totalB
 }
 
 /** F3：方案是否已超出预算（预算缩减到低于已采纳数量时提示，不自动撤销） */
-function budgetExceeded(): boolean {
+export function budgetExceeded(): boolean {
   if (budget.maxSites !== undefined && acceptedSites.length > budget.maxSites) return true;
   if (budget.totalBudgetWan !== undefined && budget.costPerSiteWan !== undefined && budget.costPerSiteWan > 0
     && acceptedSites.length * budget.costPerSiteWan > budget.totalBudgetWan) return true;
   return false;
 }
 
-function currentSites(r: AnalysisResult): PlanSite[] {
+export function currentSites(r: AnalysisResult): PlanSite[] {
   if (!sameRules(r)) return [];
   const rem = remainingBudget();
   const countExhausted = rem.maxSites !== undefined && rem.maxSites <= 0;
@@ -1107,3 +1107,173 @@ function escapeHtml(s: string): string {
 }
 
 export type { GapPatch, PlanSite };
+
+// ---------- React 页签动作层（plan / compare / street / log 迁移后共用） ----------
+
+export function refreshWorkbench(): void {
+  if (currentResult && map.ready) map.setPlanSites(displayedPlanSites());
+  render();
+  workbenchListener?.();
+}
+
+export const planActions = {
+  accept(id: string) {
+    if (!currentResult) return;
+    const s = currentSites(currentResult).find((x) => siteId(x) === id);
+    if (s) { acceptedSites.push(s); refreshWorkbench(); }
+  },
+  reject(id: string) {
+    if (!currentResult) return;
+    const s = currentSites(currentResult).find((x) => siteId(x) === id);
+    if (s) { rejectedSites.push(s); refreshWorkbench(); }
+  },
+  undoAccept(id: string) { acceptedSites = acceptedSites.filter((s) => siteId(s) !== id); refreshWorkbench(); },
+  undoReject(id: string) { rejectedSites = rejectedSites.filter((s) => siteId(s) !== id); refreshWorkbench(); },
+  removeCustom(idx: number) { customCandidates.splice(idx, 1); refreshWorkbench(); },
+  removeZone(idx: number) { noGoZones.splice(idx, 1); refreshWorkbench(); },
+  addCandidate(lat: number, lng: number, cat: PlanSite['category']): boolean {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -85 || lat > 85 || lng < -180 || lng > 180) {
+      banner('请输入有效的纬度（-85~85）与经度（-180~180）。');
+      return false;
+    }
+    if (!currentResult || !sameRules(currentResult)) { banner('此项目使用历史规则，仅可查看。'); return false; }
+    customCandidates.push({ latLng: { lat, lng }, category: cat });
+    refreshWorkbench();
+    return true;
+  },
+  addZone(radiusM: number | undefined): boolean {
+    if (!currentResult || !sameRules(currentResult)) return false;
+    if (!radiusM) { banner('请输入禁建区半径（米）。'); return false; }
+    noGoZones.push({ center: currentResult.center, radiusM });
+    const centerNow = currentResult.center;
+    const conflicts = acceptedSites.filter((s) => localDistM(s.latLng.lat, s.latLng.lng, centerNow.lat, centerNow.lng) <= radiusM);
+    if (conflicts.length) banner(`注意：新禁建区与 ${conflicts.length} 个已采纳点重叠——二者在方案讨论中属于冲突项，请人工裁决（系统不自动撤销）。`, 'warn', 10000);
+    refreshWorkbench();
+    return true;
+  },
+  applyBudget(rawMax: string, rawCost: string, rawTotal: string): boolean {
+    if (!currentResult || !sameRules(currentResult)) return false;
+    const readNum = (raw: string, max: number, integer: boolean): { ok: true; v?: number } | { ok: false } => {
+      if (raw.trim() === '') return { ok: true };
+      const v = Number(raw);
+      if (!Number.isFinite(v) || v < 0 || v > max || (integer && !Number.isInteger(v))) return { ok: false };
+      return { ok: true, v };
+    };
+    const maxR = readNum(rawMax, 100, true);
+    const costR = readNum(rawCost, 1_000_000, false);
+    const totalR = readNum(rawTotal, 10_000_000, false);
+    if (!maxR.ok || !costR.ok || !totalR.ok) {
+      banner('预算输入无效：最大补点数需为 0–100 整数，成本与预算需为非负数且不超上限。本次未修改约束。');
+      return false;
+    }
+    budget = {};
+    if (maxR.v !== undefined) budget.maxSites = maxR.v;
+    if (costR.v !== undefined) budget.costPerSiteWan = costR.v;
+    if (totalR.v !== undefined) budget.totalBudgetWan = totalR.v;
+    if (!Object.keys(budget).length) banner('预算约束已清空。', 'info');
+    refreshWorkbench();
+    return true;
+  },
+  adoptCustom(idx: number): void {
+    if (!currentResult || !sameRules(currentResult)) return;
+    const cc = customCandidates[idx];
+    if (!cc) return;
+    const zone = noGoZones.find((z) => localDistM(cc.latLng.lat, cc.latLng.lng, z.center.lat, z.center.lng) <= z.radiusM);
+    if (zone) {
+      banner(`该候选位于禁建区内（圆心 ${zone.center.lat.toFixed(4)}, ${zone.center.lng.toFixed(4)} 半径 ${zone.radiusM}m），已拒绝采纳。`);
+      return;
+    }
+    const unavailable = currentResult.assessmentUnavailableCategories ?? currentResult.failedCategories ?? [];
+    if (unavailable.includes(cc.category)) {
+      banner(`「${CATEGORY_MAP[cc.category as keyof typeof CATEGORY_MAP]?.name ?? cc.category}」检索不完整（未知），不能据此推断覆盖收益，已拒绝采纳。`);
+      return;
+    }
+    const rem = remainingBudget();
+    if (rem.maxSites !== undefined && rem.maxSites <= 0) {
+      banner(`已达最大补点数上限（${budget.maxSites} 处）。要继续采纳请先撤销已采纳点或调高上限。`);
+      return;
+    }
+    if (rem.totalBudgetWan !== undefined && rem.costPerSiteWan !== undefined && rem.costPerSiteWan > 0 && rem.totalBudgetWan < rem.costPerSiteWan) {
+      banner(`已超出总预算（${budget.totalBudgetWan} 万 / 单点 ${budget.costPerSiteWan} 万）。要继续采纳请先撤销已采纳点或调整预算。`);
+      return;
+    }
+    const cat = cc.category;
+    const cov: Record<string, Uint8Array> = {};
+    for (const k of Object.keys(currentResult.gap.coveredMasks)) cov[k] = Uint8Array.from(currentResult.gap.coveredMasks[k]);
+    for (const s of acceptedSites) applySiteCoverage(cov, s.category, s.latLng, currentResult.field);
+    const w = currentResult.gap.weightGrid;
+    const beforeMask = Uint8Array.from(cov[cat]);
+    let beforeW = 0;
+    for (let k = 0; k < w.length; k++) if (w[k] > 0 && cov[cat][k] === 1) beforeW += w[k];
+    applySiteCoverage(cov, cat, cc.latLng, currentResult.field);
+    let afterW = 0, newlyCells = 0;
+    for (let k = 0; k < w.length; k++) {
+      if (w[k] <= 0 || cov[cat][k] !== 1) continue;
+      afterW += w[k];
+      if (beforeMask[k] !== 1) newlyCells++;
+    }
+    const total = currentResult.gap.totalWeight;
+    const pct = (x: number) => (total > 0 ? x / total : 1) * 100;
+    acceptedSites.push({
+      rank: acceptedSites.length + 1, latLng: cc.latLng, category: cat,
+      coveredCells: newlyCells, coveredWeight: afterW - beforeW,
+      beforePct: Math.round(pct(beforeW) * 10) / 10, afterPct: Math.round(pct(afterW) * 10) / 10,
+      estWalkMin: Math.round((THRESHOLDS.coreRadiusM * 1.25 / PERSONA_MAP[currentResult.persona].speed) * 10) / 10,
+      rationale: `自定义候选落点：采纳后「${CATEGORY_MAP[cat as keyof typeof CATEGORY_MAP].name}」居住覆盖率 ${Math.round(pct(beforeW))}% → ${Math.round(pct(afterW))}%`
+    });
+    customCandidates.splice(idx, 1);
+    refreshWorkbench();
+  }
+};
+
+export const compareActions = {
+  save(k: 'A' | 'B'): void {
+    if (!currentResult || !sameRules(currentResult)) return;
+    if (scenarios[k] && !window.confirm(`用当前选择覆盖已记录的方案 ${k}？`)) return;
+    scenarios[k] = captureScenario(currentResult, { acceptedSites, rejectedSites });
+    refreshWorkbench();
+  },
+  load(k: 'A' | 'B'): void {
+    if (!currentResult || !sameRules(currentResult)) return;
+    const saved = scenarios[k];
+    if (!saved || saved.baselineKey !== comparisonBaseline(currentResult)) { banner('方案基线不同，无法载入。', 'warn'); return; }
+    if ((acceptedSites.length || rejectedSites.length) && !window.confirm('载入此方案将替换当前工作台选择；尚未记录的调整将丢失。是否继续？')) return;
+    acceptedSites = structuredClone(saved.acceptedSites);
+    rejectedSites = structuredClone(saved.rejectedSites);
+    refreshWorkbench();
+  },
+  reset(): void {
+    if (!currentResult || !sameRules(currentResult)) return;
+    if ((acceptedSites.length || rejectedSites.length) && !window.confirm('清空当前工作台的采纳和跳过选择？已记录的 A / B 会保留。')) return;
+    acceptedSites = []; rejectedSites = [];
+    refreshWorkbench();
+  }
+};
+
+// ---------- street 页签 React 桥：表单由组件驱动，状态/任务容器仍走原 DOM 刷新 ----------
+
+export function streetMounts(): void {
+  void refreshJobList();
+  void refreshUsageLine();
+  updateStreetStatus();
+  if (streetJobId && streetLastSnapshot?.status === 'running' && !streetPollTimer) startPolling();
+}
+
+export async function streetStart(opts: {
+  address: string; scope: string; radiusM: number; maxCommunities: number; persona: string;
+}): Promise<void> {
+  try {
+    const res = await fetch('/api/batch/street', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(opts),
+    });
+    const data = await res.json();
+    if (data.status !== 0 || !data.jobId) { banner(`任务发起失败：${data.message ?? '未知错误'}`); return; }
+    streetJobId = data.jobId;
+    streetLastSnapshot = { status: 'running', done: 0, total: data.total ?? 0, current: '排队中…', communities: [], summary: null, persona: opts.persona };
+    startPolling();
+  } catch (e) {
+    banner(`任务发起失败：${(e as Error).message}`);
+  }
+}
