@@ -17,7 +17,6 @@ export function PoiPop({ name, category, address, uid, act }: PoiPopProps) {
   const [note, setNote] = useState('');
   return (
     <div className="poi-pop">
-      <div className="poi-pop-title">{name}</div>
       <div className="poi-pop-sub">{category}{address ? ` · ${address}` : ''}</div>
       <Space wrap size={6} className="poi-pop-actions">
         <Button size="small" data-route-uid={uid} onClick={() => act({ routeUid: uid })}>步行路线核验</Button>

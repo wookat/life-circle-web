@@ -206,7 +206,7 @@ export class MapView {
         act: (ds) => (window as unknown as { __lcPoiAct?: (d: Record<string, string>) => void }).__lcPoiAct?.(ds)
       }));
     });
-    const info = new BMapGL.InfoWindow(host, { width: 320 });
+    const info = new BMapGL.InfoWindow(host, { width: 320, title: escapeHtml(p.name) });
     // close 只卸载自己那个 root：openInfoWindow 会先关掉旧弹窗触发其 close，
     // 若按 this.popRoot 卸载会把刚挂上的新 root 一并卸掉（第二个弹窗空白）
     info.addEventListener?.('close', () => {
@@ -362,8 +362,8 @@ export class MapView {
         const marker = new BMapGL.Marker(pt, { icon: iconFor('#00bcd4', `补${site.rank}`) });
         marker.addEventListener('click', () => {
           const info = new BMapGL.InfoWindow(
-            `<div class="poi-pop"><div class="poi-pop-title">规划建议 #${site.rank}：补建${catName(site.category)}</div><div class="poi-pop-sub">${escapeHtml(site.rationale)}</div></div>`,
-            { width: 250 }
+            `<div class="poi-pop"><div class="poi-pop-sub">${escapeHtml(site.rationale)}</div></div>`,
+            { width: 250, title: `规划建议 #${site.rank}：补建${catName(site.category)}` }
           );
           map.openInfoWindow(info, pt);
         });
@@ -424,10 +424,10 @@ export class MapView {
         const marker = new BMapGL.Marker(pt, { icon: iconFor(color, c.grade === '-' ? '?' : String(c.grade)) });
         const coverage = c.coverageUnavailable || c.coverageShare == null ? '无法评估' : `${Math.round(c.coverageShare * 100)}%`;
         const summary = c.score >= 0
-          ? `<b>${escapeHtml(c.name)}</b><br/>评分 ${c.score}（${escapeHtml(c.grade)} 级）· 人口覆盖率 ${coverage}${c.dominantMissing ? `<br/>主要缺失：${escapeHtml(catName(c.dominantMissing))}` : ''}`
-          : `<b>${escapeHtml(c.name)}</b><br/>分析失败`;
+          ? `评分 ${c.score}（${escapeHtml(c.grade)} 级）· 人口覆盖率 ${coverage}${c.dominantMissing ? `<br/>主要缺失：${escapeHtml(catName(c.dominantMissing))}` : ''}`
+          : '分析失败';
         marker.addEventListener('click', () => {
-          const info = new BMapGL.InfoWindow(`<div class="poi-pop">${summary}</div>`, { width: 240 });
+          const info = new BMapGL.InfoWindow(`<div class="poi-pop">${summary}</div>`, { width: 240, title: escapeHtml(c.name) });
           map.openInfoWindow(info, pt);
         });
         map.addOverlay(marker);
