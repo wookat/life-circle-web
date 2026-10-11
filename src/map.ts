@@ -193,8 +193,9 @@ export class MapView {
     this.popRoot?.unmount();
     this.popRoot = null;
     const host = document.createElement('div');
-    this.popRoot = createRoot(host);
-    this.popRoot.render(createElement(PoiPop, {
+    const root = createRoot(host);
+    this.popRoot = root;
+    root.render(createElement(PoiPop, {
       name: p.name,
       category: categoryName,
       address: p.address ?? '',
@@ -202,7 +203,12 @@ export class MapView {
       act: (ds) => (window as unknown as { __lcPoiAct?: (d: Record<string, string>) => void }).__lcPoiAct?.(ds)
     }));
     const info = new BMapGL.InfoWindow(host, { width: 320 });
-    info.addEventListener?.('close', () => { this.popRoot?.unmount(); this.popRoot = null; });
+    // close 只卸载自己那个 root：openInfoWindow 会先关掉旧弹窗触发其 close，
+    // 若按 this.popRoot 卸载会把刚挂上的新 root 一并卸掉（第二个弹窗空白）
+    info.addEventListener?.('close', () => {
+      if (this.popRoot === root) { this.popRoot = null; }
+      root.unmount();
+    });
     this.map.openInfoWindow(info, new BMapGL.Point(p.lng, p.lat));
   }
 
