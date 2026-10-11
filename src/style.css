@@ -172,10 +172,13 @@ html { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
   overflow: hidden;
 }
 /* 地图弹窗统一容器：标题在顶无留白，控件由 React+antd 渲染 */
-.poi-pop { min-width: 220px; font-size: 13px; font-family: var(--font); }
+.poi-pop { min-width: 220px; padding: 4px 10px 10px; box-sizing: border-box; font-size: 13px; font-family: var(--font); }
 .poi-pop-title { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.4; }
 .poi-pop-sub { margin-top: 2px; font-size: 12px; color: var(--ink-3, #5a6478); line-height: 1.5; }
 .poi-pop-actions { margin-top: 8px; }
+/* BMapGL 气泡自带的空标题栏（31px 死区）压缩掉；关闭按钮绝对定位仍留在右上角 */
+#map .BMap_bubble_top { height: 0 !important; }
+#map .BMap_bubble_title { display: none !important; }
 
 #ctx-menu {
   position: absolute; z-index: 40; min-width: 168px;
