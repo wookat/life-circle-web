@@ -721,6 +721,35 @@ async function computeReport(chain: GatewayChain, opts: ComputeOpts): Promise<An
   const generatedAt = new Date().toISOString();
   const mock = pre.channel === 'mock' || rm.channel === 'mock' || poiUsedMock;
 
+  // 人口覆盖率兜底：住宅 POI 口径判「无法评估」时回退 WorldPop 2020 人口栅格口径
+  // （等时圈内常住人口 / 理想步行圈 speed×minutes 内常住人口），经服务端代理回源。
+  let popCoverage: AnalysisResult['popCoverage'] = null;
+  // 配额耗尽时不再发起任何回源请求（与过街扫描同一节流原则）
+  if (gap.coverageUnavailable && !quotaExhausted && rings.length) {
+    const outer = rings[rings.length - 1].lines;
+    const ring = outer.reduce<LatLng[] | undefined>(
+      (best, line) => (line.length > (best?.length ?? 0) ? line : best),
+      undefined
+    );
+    if (ring && ring.length >= 3) {
+      try {
+        const r = await fetch('/api/popcoverage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ center, ring, radiusM: persona.speed * minutes })
+        }).then((res) => res.json());
+        if (r?.popCoverage) {
+          popCoverage = r.popCoverage;
+          warnings.push(
+            `人口覆盖率改用 WorldPop 2020 年 100m 人口栅格口径估算：等时圈内常住人口约 ${Math.round(r.popCoverage.popIn).toLocaleString()} / 理想步行圈 ${r.popCoverage.radiusM}m 内约 ${Math.round(r.popCoverage.popEval).toLocaleString()}（住宅 POI 口径不可用，两口径不混用，四维评分仍按住宅口径剔除覆盖维度）`
+          );
+        }
+      } catch {
+        /* WorldPop 不可达时保持无法评估 */
+      }
+    }
+  }
+
   return {
     center,
     centerName: centerName || `中心点 ${center.lat.toFixed(5)},${center.lng.toFixed(5)}`,
@@ -747,6 +776,7 @@ async function computeReport(chain: GatewayChain, opts: ComputeOpts): Promise<An
     quotaExhausted,
     crossings: crossings?.stats ?? null,
     crossingSegments: crossings?.segments ?? [],
+    popCoverage,
     steps: stepUsageOut,
     mock
   };

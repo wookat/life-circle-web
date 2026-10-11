@@ -62,8 +62,12 @@ export function ReportPanel({ r, correctionsCount }: { r: AnalysisResult | null;
           <div className="kpi"><Statistic value={Math.round(dim.completeness * 100)} /><span>完整度</span></div>
           <div className="kpi"><Statistic value={Math.round(dim.proximity * 100)} /><span>临近度</span></div>
           <div className="kpi">
-            <Statistic value={r.score.coverageUnavailable ? '—' : Math.round((dim.coverage ?? 0) * 100)} />
-            <span>人口覆盖率{r.score.coverageUnavailable ? '（无法评估）' : ''}</span>
+            <Statistic value={
+              r.score.coverageUnavailable
+                ? (r.popCoverage ? Math.round(r.popCoverage.share * 100) : '—')
+                : Math.round((dim.coverage ?? 0) * 100)
+            } />
+            <span>人口覆盖率{r.score.coverageUnavailable ? (r.popCoverage ? '（WorldPop 栅格口径）' : '（无法评估）') : ''}</span>
           </div>
         </div>
 
@@ -120,7 +124,7 @@ export function ReportPanel({ r, correctionsCount }: { r: AnalysisResult | null;
                         </div>
                         <div className="pcmp-meta">
                           累积机会 {pr.cumulative?.total ?? '—'} 处 / {pr.cumulative?.categoriesCovered ?? '—'} 类<br />
-                          人口覆盖率 {pr.score.coverageUnavailable ? '无法评估' : `${Math.round((pr.score.dims.coverage ?? 0) * 100)}`}
+                          人口覆盖率 {pr.score.coverageUnavailable ? (pr.popCoverage ? `${Math.round(pr.popCoverage.share * 100)}（栅格口径）` : '无法评估') : `${Math.round((pr.score.dims.coverage ?? 0) * 100)}`}
                         </div>
                       </>
                     ) : (

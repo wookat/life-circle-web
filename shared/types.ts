@@ -295,6 +295,19 @@ export interface AnalysisResult {
   crossings: CrossingStats | null;
   /** 过街扫描的几何路段（供地图回标；无几何数据时为空数组） */
   crossingSegments?: CrossingSegment[];
+  /**
+   * 人口覆盖率（WorldPop 栅格口径）：住宅 POI 口径判「无法评估」时，
+   * 由服务端回源 WorldPop 2020 年 100m 常住人口栅格估算
+   * （等时圈内常住人口 / 理想步行圈 speed×minutes 内常住人口）。
+   * 只作覆盖参考展示，不与住宅 POI 口径混用；null/缺省 = 该口径亦不可用。
+   */
+  popCoverage?: {
+    share: number;
+    popIn: number;
+    popEval: number;
+    radiusM: number;
+    source: 'worldpop-2020';
+  } | null;
   steps: { name: string; usage: ChannelUsage }[];
   mock: boolean;
 }
