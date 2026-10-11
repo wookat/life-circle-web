@@ -188,7 +188,7 @@ docker compose up --build
 | `docs/TECH_DESIGN.md` | 技术设计文档：API 策略 / 等时圈算法 / POI 清洗 / 盲区算法 / 规划引擎 |
 | `docs/COMPARISON_TEST.md` | 真实社区对比测试报告 |
 | `docs/DEMO_SCRIPT.md` | 答辩演示脚本（5 分钟版 + 现场故障预案） |
-| `tests/` | vitest 单元测试（19 项：坐标 / 时间场 / 盲区 / 评分 / 选址） |
+| `tests/` | vitest 单元测试 175 项（坐标 / 时间场 / 盲区 / 评分 / 选址 / POI 完整性等）+ playwright 浏览器测试 31 项 |
 
 开发命令：
 
