@@ -37,6 +37,7 @@ import { createProvenance } from '../../shared/provenance.js';
 import { assessmentUnavailableCategories, poiSearchWarnings, unqueriedPoiSearch, isPoiQuotaError } from '../../shared/poiSearch.js';
 import type { CrossingSegment, CrossingStats, PoiSearchCompleteness } from '../../shared/types.js';
 import { sampleTimeNearest } from '../../shared/timefield.js';
+import { slimShareReport } from '../../shared/sharePayload.js';
 import { getCachedRoute, setCachedRoute, routeCacheKey } from '../routeCache.js';
 import type { ProjectSnapshot } from '../projects.js';
 import { openPrintableReport, downloadText, facilityCsv } from '../exports.js';
@@ -384,7 +385,7 @@ export const ui = {
     if (!state.result) return;
     banner('正在创建只读分享…', 'info', 6000);
     try {
-      const res = await fetch('/api/baidu/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state.result) });
+      const res = await fetch('/api/baidu/share', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(slimShareReport(state.result)) });
       const data = await res.json();
       if (data.status !== 0) { banner(`分享失败：${data.message ?? '未知错误'}`); return; }
       const url = `${location.origin}/api/baidu/share/${data.id}`;

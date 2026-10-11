@@ -11,6 +11,7 @@ import { worldPopCoverage } from './worldpop.js';
 import { PERSONAS } from '../../shared/config.js';
 import type { AnalysisReport } from '../../shared/analyze.js';
 import type { LatLng } from '../../shared/types.js';
+import { slimShareReport } from '../../shared/sharePayload.js';
 
 /**
  * 百度 Web API 代理：
@@ -194,8 +195,9 @@ export function createApiRouter(cfg: ServerConfig): Router {
   });
 
   // №18 只读分享：固定版本报告快照（无交互、无 AK；存储上限 100 份 FIFO）
-  router.post('/share', expressJson({ limit: '400kb' }), (req, res) => {
-    const text = typeof req.body === 'string' ? req.body : JSON.stringify(req.body ?? {});
+  router.post('/share', expressJson({ limit: '8mb' }), (req, res) => {
+    // 只存只读页渲染所需的字段子集——完整报告数 MB，瘦身快照恒在 KB 级
+    const text = JSON.stringify(slimShareReport(req.body ?? {}));
     const out = saveShare(text);
     if ('error' in out) {
       res.status(400).json({ status: -1, message: out.error });

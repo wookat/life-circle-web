@@ -10,6 +10,9 @@ const app = express();
 const ipLimiter = new IpLimiter();
 
 app.disable('x-powered-by');
+// 分享快照是完整体检报告，体积可达数 MB——该路径单独放宽 body 上限，
+// 先于全局解析器挂载（express.json 对已解析的 body 自动跳过）。
+app.use('/api/baidu/share', express.json({ limit: '8mb' }));
 app.use(express.json({ limit: '256kb' }));
 
 // 每 IP 基础限流
