@@ -84,6 +84,17 @@ export function ReportPanel({ r, correctionsCount }: { r: AnalysisResult | null;
           </div>
         )}
 
+        {(() => {
+          const bad = searches.filter((s) => s.status !== 'complete');
+          if (bad.length === 0) return null;
+          const names = bad.slice(0, 4).map((s) => `${s.keyword}·${POI_STATUS[s.status]}`).join('，');
+          return (
+            <div className="rpt-sub rpt-meta" style={{ color: 'var(--ink-2)' }}>
+              数据置信：{bad.length} 个检索词未取全（{names}{bad.length > 4 ? ' 等' : ''}），对应维度按缺失口径处理，逐词明细见「对标」页。
+            </div>
+          );
+        })()}
+
         <div className="rpt-verdict">
           {r.planSites.length > 0 ? (
             <>优先补建「{CATEGORY_MAP[r.planSites[0].category]?.name ?? r.planSites[0].category}」于候选 #{r.planSites[0].rank}：新覆盖 {r.planSites[0].coveredCells} 个居住网格，该类覆盖率 {r.planSites[0].beforePct}%→{r.planSites[0].afterPct}%。</>
