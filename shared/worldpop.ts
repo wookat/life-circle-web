@@ -18,7 +18,7 @@ export interface PopCoverageEstimate {
 
 const API = 'https://api.worldpop.org/v1';
 const POLL_MS = 1500;
-const TIMEOUT_MS = 25000;
+const TIMEOUT_MS = 60000;
 
 function circlePolygon(center: LatLng, radiusM: number, n = 48): number[][] {
   const latRad = 111320;
