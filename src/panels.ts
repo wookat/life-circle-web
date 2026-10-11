@@ -158,9 +158,15 @@ export function getStreetView(): StreetView {
   return { jobs: streetJobs, usageText: streetUsageText, snap: streetLastSnapshot, hasJob: !!streetJobId };
 }
 
+/** 服务端通道是否在线：无服务端部署（如静态 Pages）下跳过批量/usage 端点，避免 404 噪音 */
+let serverJobsEnabled = true;
+export function setServerJobsEnabled(v: boolean) { serverJobsEnabled = v; }
+
 async function refreshJobList() {
+  if (!serverJobsEnabled) return;
   try {
     const res = await fetch(`${API_BASE}api/batch/jobs`);
+    if (!res.ok) { serverJobsEnabled = false; return; }
     const data = await res.json();
     const jobs: any[] = data.jobs ?? [];
     streetJobs = jobs.slice(0, 3).map((j) => ({
@@ -174,8 +180,10 @@ async function refreshJobList() {
 }
 /** №13 调用预算面板：本地进程计数（非平台账户余额），预算与命中一目了然 */
 async function refreshUsageLine() {
+  if (!serverJobsEnabled) return;
   try {
     const res = await fetch(`${API_BASE}api/baidu/usage`);
+    if (!res.ok) { serverJobsEnabled = false; return; }
     const data = await res.json();
     const u = data.usage;
     if (!u) return;

@@ -31,7 +31,7 @@ import { fieldToDataUrl } from '../fieldRender.js';
 import { Hud, banner, CHANNEL_LABEL } from '../hud.js';
 import type { LayerKey } from '../map.js';
 import { map } from '../appRuntime.js';
-import { getWorkbenchState, getWorkbenchSnapshot, setWorkbenchState, onWorkbenchChange, displayedPlanSites, setResult, switchTab } from '../panels.js';
+import { getWorkbenchState, getWorkbenchSnapshot, setWorkbenchState, onWorkbenchChange, displayedPlanSites, setResult, switchTab, setServerJobsEnabled } from '../panels.js';
 import { setupProjects } from '../projectUi.js';
 import { createProvenance } from '../../shared/provenance.js';
 import { assessmentUnavailableCategories, poiSearchWarnings, unqueriedPoiSearch, isPoiQuotaError } from '../../shared/poiSearch.js';
@@ -108,6 +108,7 @@ export async function init() {
     badge.className = 'badge badge-warn';
   }
   state.hasServerAk = cfg.hasServerAk;
+  setServerJobsEnabled(cfg.hasServerAk); // 无服务端部署跳过批量/usage 端点，避免静态站 404
 
   state.chain = new GatewayChain(gateways, () => updateChannelCard());
 

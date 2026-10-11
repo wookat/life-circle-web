@@ -53,7 +53,11 @@ export function ReportPanel({ r, correctionsCount }: { r: AnalysisResult | null;
             <div className="rpt-sub">
               {PERSONA_MAP[r.persona].name} · 步行 {r.minutes} 分钟 · 速度 {r.field.speed}m/min<br />
               {new Date(r.generatedAt).toLocaleString('zh-CN')}
-              {r.mock && <> · <span className="mock-flag">演示数据</span></>}
+              {r.mock && (() => {
+                const total = searches.length || 12;
+                const mockN = searches.filter((s) => s.source === 'mock').length || total;
+                return <> · <span className="mock-flag">{mockN >= total ? '演示数据（合成通道）' : `含合成数据 ${mockN}/${total} 类`}</span></>;
+              })()}
             </div>
           </div>
         </div>

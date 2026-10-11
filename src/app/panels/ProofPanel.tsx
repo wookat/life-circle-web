@@ -79,9 +79,16 @@ function LiveEvidence({ r }: { r: AnalysisResult }) {
     <>
       <Alert
         className="rpt-summary" type="info" showIcon={false}
-        message={r.mock
-          ? '本次运行为演示数据（合成通道），下表为本地会话真实步骤记录。'
-          : `本次体检真实调用：${steps.length} 步 · 合计 ${(totalMs / 1000).toFixed(1)}s · 通道 ${channels} · 缓存命中 ${cacheHits}`}
+        message={(() => {
+          const searches = r.poiSearch ?? [];
+          const mockN = searches.filter((s) => s.source === 'mock').length;
+          const partial = r.mock && mockN > 0 && mockN < searches.length;
+          return r.mock
+            ? (partial
+              ? `本次运行 ${mockN}/${searches.length} 类检索落入合成兜底（其余为真实检索），下表为本地会话真实步骤记录。`
+              : '本次运行为演示数据（合成通道），下表为本地会话真实步骤记录。')
+            : `本次体检真实调用：${steps.length} 步 · 合计 ${(totalMs / 1000).toFixed(1)}s · 通道 ${channels} · 缓存命中 ${cacheHits}`;
+        })()}
       />
       <Table<StepRow>
         size="small" rowKey={(s) => s.name + s.ms} columns={stepCols} dataSource={steps}
