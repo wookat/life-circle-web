@@ -44,8 +44,6 @@ html { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
 ::-webkit-scrollbar-thumb:hover { background-color: var(--ink-3); }
 ::-webkit-scrollbar-corner { background: transparent; }
 
-input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; }
-
 #app { display: flex; flex-direction: column; height: 100vh; }
 
 /* ---------- 顶栏 ---------- */
@@ -72,8 +70,10 @@ input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px;
 #topbar .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.4); color: #fff; }
 #topbar .ant-input { border-color: rgba(255,255,255,0.22); }
 #topbar .ant-checkbox-wrapper, #topbar label { color: #e8eef5; }
-#topbar select { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.24); color: #e8eef5; }
-#topbar select option { color: var(--ink); }
+#topbar .ant-btn.on { background: var(--accent); border-color: #7fa8ff; color: #fff; }
+#topbar .ant-select .ant-select-selector { background: rgba(255,255,255,0.10); border-color: rgba(255,255,255,0.24); color: #e8eef5; }
+#topbar .ant-select .ant-select-selection-item, #topbar .ant-select .ant-select-arrow { color: #e8eef5; }
+#topbar .ant-select-open .ant-select-selector { border-color: #7fa8ff !important; }
 .logo-mark { display: block; flex: 0 0 auto; }
 
 .controls { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
@@ -90,27 +90,7 @@ input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px;
 #addr-input::placeholder { color: var(--ink-3); }
 #addr-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.14); }
 
-.btn {
-  height: 34px; padding: 0 14px; border-radius: var(--radius-s); border: 1px solid var(--line-2);
-  background: #fff; color: var(--ink); font-size: 13px; font-family: var(--font); cursor: pointer;
-  white-space: nowrap;
-  transition: border-color 0.15s, color 0.15s, background 0.15s, transform 0.06s, box-shadow 0.15s;
-}
-.btn:hover { border-color: var(--accent); color: var(--accent); }
-.btn:active { transform: translateY(1px); }
-.btn:disabled { opacity: 0.55; cursor: wait; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
-.btn.primary:hover { background: var(--accent-deep); border-color: var(--accent-deep); color: var(--accent-ink); }
-.btn.primary:disabled { background: var(--accent); opacity: 0.55; }
-.btn.ghost.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .only-narrow { display: none !important; }
-
-select {
-  height: 34px; border: 1px solid var(--line-2); border-radius: var(--radius-s); background: #fff;
-  padding: 0 6px; font-size: 13px; outline: none; font-family: var(--font); color: var(--ink);
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.14); }
 
 .badge {
   font-size: 11px; padding: 3px 9px; border-radius: 999px; font-weight: 600; white-space: nowrap;
@@ -140,14 +120,7 @@ select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47, 111, 
 
 /* ---------- 本地项目 ---------- */
 #projects-card label { color: var(--ink-2); font-size: 12px; cursor: default; }
-#project-name, #project-list { width: 100%; min-width: 0; font-family: var(--font); font-size: 12px; }
-#project-name {
-  height: 34px; padding: 0 8px; color: var(--ink); background: #fff;
-  border: 1px solid var(--line-2); border-radius: var(--radius-s);
-}
-#project-name:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47, 111, 237, 0.14); }
 .project-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 7px 0; }
-.project-actions .btn { padding: 0 6px; font-size: 12px; }
 .project-status, .project-note { margin: 8px 0 0; font-size: 11px; line-height: 1.6; overflow-wrap: anywhere; }
 .project-status { color: var(--ok); }
 .project-status[data-error="true"] { color: var(--warn); }
@@ -198,14 +171,6 @@ select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47, 111, 
   display: inline-flex; background: var(--card); border: 1px solid var(--line-2); border-radius: var(--radius-s);
   overflow: hidden;
 }
-#map-type-switch button {
-  border: none; background: transparent; padding: 6px 14px; font-size: 12px; font-family: var(--font);
-  color: var(--ink-2); cursor: pointer; border-right: 1px solid var(--line);
-}
-#map-type-switch button:last-child { border-right: none; }
-#map-type-switch button:hover { color: var(--accent); }
-#map-type-switch button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-
 #ctx-menu {
   position: absolute; z-index: 40; min-width: 168px;
   background: var(--card); border: 1px solid var(--line-2); border-radius: var(--radius-s);
@@ -223,13 +188,8 @@ select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47, 111, 
   display: flex; flex-direction: column; min-height: 0; z-index: 30;
 }
 #panel-tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--line); flex: 0 0 auto; }
-#panel-tabs button {
-  flex: 1 0 23%; padding: 11px 4px; border: none; background: none; font-size: 13px; font-family: var(--font); white-space: nowrap;
-  color: var(--ink-2); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-}
-#panel-tabs button:hover { color: var(--ink); background: #f7f9fc; }
-#panel-tabs button.on { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+#panel-tabs .ant-tabs { flex: 1; }
+#panel-tabs .ant-tabs-nav { margin-bottom: 0; }
 #panel-body { flex: 1; overflow-y: auto; padding: 16px; }
 #panel-body > * { animation: rise 0.26s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -241,7 +201,7 @@ select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47, 111, 
 #panel-footer { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--line); background: var(--card); }
 .comparison-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .comparison-actions .plan-card { padding: 10px; min-width: 0; }
-.comparison-actions .btn { margin: 3px 0; padding: 5px 9px; }
+
 .comparison-tools { display: flex; flex-wrap: wrap; gap: 6px; }
 .comparison-table { table-layout: fixed; overflow-wrap: anywhere; }
 .comparison-table th:first-child { width: 30%; }
@@ -293,7 +253,6 @@ table.tbl .dot { display: inline-block; width: 8px; height: 8px; border-radius: 
 .plan-card:hover { border-color: var(--accent); }
 .plan-card.accepted { border-color: var(--ok); background: var(--ok-soft); }
 .plan-card.skipped { opacity: 0.62; }
-.btn-busy { opacity: 0.6; pointer-events: none; }
 .plan-card h4 { margin: 0 0 6px; font-size: 13px; display: flex; align-items: center; gap: 7px; }
 .plan-card .rank { background: var(--accent); color: #fff; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex: 0 0 auto; }
 .gain-chip {
@@ -359,21 +318,6 @@ table.tbl .dot { display: inline-block; width: 8px; height: 8px; border-radius: 
 
 body.sb-off #sidebar, body.panel-off #panel { display: none; }
 
-.modal {
-  position: fixed; inset: 0; z-index: 110; background: rgba(20, 26, 40, 0.44);
-  display: flex; align-items: center; justify-content: center;
-}
-.modal-box {
-  width: min(460px, 92vw); background: var(--card); border: 1px solid var(--line-2);
-  border-radius: 14px; padding: 18px 20px;
-}
-.modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.modal-title { font-weight: 700; font-size: 15px; }
-.modal-close {
-  border: 1px solid var(--line-2); background: var(--card); border-radius: 6px; width: 28px; height: 28px;
-  font-size: 13px; color: var(--ink-2); cursor: pointer;
-}
-.modal-close:hover { color: var(--bad); border-color: var(--bad); }
 .modal-body { margin: 0; padding-left: 20px; color: var(--ink-2); line-height: 2.0; font-size: 13px; }
 .modal-body b { color: var(--ink); }
 
