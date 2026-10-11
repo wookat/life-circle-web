@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Alert, Statistic, Table, Tag } from 'antd';
+import { Alert, Card, Statistic, Table, Tag } from 'antd';
 import type { AnalysisResult, PoiSearchCompleteness } from '../../../shared/types.js';
 import { CATEGORY_MAP, PERSONA_MAP } from '../../../shared/config.js';
 import { CHANNEL_LABEL } from '../../hud.js';
@@ -35,45 +35,50 @@ export function ReportPanel({ r, correctionsCount }: { r: AnalysisResult | null;
 
   return (
     <>
-      <div className="rpt-grade">
-        <div className="grade-circle" style={{ background: GRADE_COLOR[r.score.grade] ?? '#666' }}>
-          <span>{r.score.grade}</span><b>{r.score.total}</b>
-        </div>
-        <div>
-          <div className="rpt-title">{r.centerName || '所选中心点'}</div>
-          <div className="rpt-sub">
-            {PERSONA_MAP[r.persona].name} · 步行 {r.minutes} 分钟 · 速度 {r.field.speed}m/min<br />
-            {new Date(r.generatedAt).toLocaleString('zh-CN')}
-            {r.mock && <> · <span className="mock-flag">演示数据</span></>}
+      <Card className="rpt-hero" size="small">
+        <div className="rpt-grade">
+          <div className="grade-circle" style={{ background: GRADE_COLOR[r.score.grade] ?? '#666' }}>
+            <span>{r.score.grade}</span><b>{r.score.total}</b>
+          </div>
+          <div className="rpt-grade-text">
+            <div className="rpt-title">{r.centerName || '所选中心点'}</div>
+            <div className="rpt-sub">
+              {PERSONA_MAP[r.persona].name} · 步行 {r.minutes} 分钟 · 速度 {r.field.speed}m/min<br />
+              {new Date(r.generatedAt).toLocaleString('zh-CN')}
+              {r.mock && <> · <span className="mock-flag">演示数据</span></>}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="kpi-row">
-        <div className="kpi"><Statistic value={Math.round(dim.completeness * 100)} /><span>完整度</span></div>
-        <div className="kpi"><Statistic value={Math.round(dim.proximity * 100)} /><span>临近度</span></div>
-        <div className="kpi">
-          <Statistic value={r.score.coverageUnavailable ? '—' : Math.round((dim.coverage ?? 0) * 100)} />
-          <span>人口覆盖率{r.score.coverageUnavailable ? '（无法评估）' : ''}</span>
+        <div className="kpi-row">
+          <div className="kpi"><Statistic value={Math.round(dim.completeness * 100)} /><span>完整度</span></div>
+          <div className="kpi"><Statistic value={Math.round(dim.proximity * 100)} /><span>临近度</span></div>
+          <div className="kpi">
+            <Statistic value={r.score.coverageUnavailable ? '—' : Math.round((dim.coverage ?? 0) * 100)} />
+            <span>人口覆盖率{r.score.coverageUnavailable ? '（无法评估）' : ''}</span>
+          </div>
         </div>
-      </div>
 
-      {r.cumulative && (
-        <div className="rpt-sub" style={{ margin: '-6px 0 10px' }}>
-          累积机会（已取样本口径）：{r.minutes} 分钟步行圈内查得设施 <b>{r.cumulative.total}</b> 处 · 覆盖 <b>{r.cumulative.categoriesCovered}</b>/10 类
-          {r.cumulative.missingCategories.length > 0 && ` · 样本中未查得：${r.cumulative.missingCategories.map((c) => CATEGORY_MAP[c as keyof typeof CATEGORY_MAP]?.name ?? c).join('、')}`}
-        </div>
-      )}
+        {r.cumulative && (
+          <div className="rpt-sub rpt-meta">
+            累积机会（已取样本口径）：{r.minutes} 分钟步行圈内查得设施 <b>{r.cumulative.total}</b> 处 · 覆盖 <b>{r.cumulative.categoriesCovered}</b>/10 类
+            {r.cumulative.missingCategories.length > 0 && ` · 样本中未查得：${r.cumulative.missingCategories.map((c) => CATEGORY_MAP[c as keyof typeof CATEGORY_MAP]?.name ?? c).join('、')}`}
+          </div>
+        )}
 
-      {r.accuracy && r.accuracy.samples > 0 && (
-        <div className="rpt-sub" style={{ margin: '-6px 0 10px' }}>
-          插值精度核验：抽样 {r.accuracy.samples} 个算路点{r.mock ? '（当前含演示数据，仅供流程验证）' : ''}，模型估计平均绝对误差 <b>{r.accuracy.maeMinutes} 分钟（{r.accuracy.maePercent}%）</b>，最大偏差 {r.accuracy.worstPercent}%
-        </div>
-      )}
+        {r.accuracy && r.accuracy.samples > 0 && (
+          <div className="rpt-sub rpt-meta">
+            插值精度核验：抽样 {r.accuracy.samples} 个算路点{r.mock ? '（当前含演示数据，仅供流程验证）' : ''}，模型估计平均绝对误差 <b>{r.accuracy.maeMinutes} 分钟（{r.accuracy.maePercent}%）</b>，最大偏差 {r.accuracy.worstPercent}%
+          </div>
+        )}
+      </Card>
 
       {(r.warnings?.length ?? 0) > 0 && (
         <Alert className="rpt-summary" type="warning" showIcon={false}
-          message={<><span className="sum-label" style={{ color: 'var(--warn)' }}>口径与警告</span>{(r.warnings ?? []).join('；')}</>} />
+          message={<>
+            <span className="sum-label" style={{ color: 'var(--warn)' }}>口径与警告</span>
+            <ul className="rpt-warn-list">{(r.warnings ?? []).map((w, i) => <li key={i}>{w}</li>)}</ul>
+          </>} />
       )}
 
       {r.persona === 'elderly' && (

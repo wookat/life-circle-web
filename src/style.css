@@ -212,7 +212,14 @@ html { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
 .comparison-table th:first-child { width: 30%; }
 table.tbl.comparison-table th, table.tbl.comparison-table td { padding: 8px 4px; font-size: 12px; color: var(--ink); white-space: normal; }
 
+.rpt-hero { margin-bottom: 14px; }
+.rpt-hero .ant-card-body { padding: 14px 16px; }
 .rpt-grade { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+.rpt-grade-text { min-width: 0; }
+.rpt-meta { margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
+.rpt-meta + .rpt-meta { margin-top: 4px; padding-top: 0; border-top: none; }
+.rpt-warn-list { margin: 2px 0 0; padding-left: 18px; }
+.rpt-warn-list li { margin: 2px 0; }
 .grade-circle {
   width: 78px; height: 78px; border-radius: 50%; display: flex; flex-direction: column;
   align-items: center; justify-content: center; color: #fff; flex: 0 0 auto;
