@@ -3,6 +3,29 @@ import type { ColumnsType } from 'antd/es/table';
 import type { AnalysisResult, ChannelUsage } from '../../../shared/types.js';
 import { CHANNEL_LABEL } from '../../hud.js';
 import { BATCH_ROWS, DELIVERABLES, GATES, MAPPING_ROWS, REPO, blob } from '../proofData.js';
+import { ISO_IDEAL_RADIUS_M, ISO_SAMPLES, type IsoSample } from '../isochroneCompareData.js';
+
+/** 等时圈形态：三样例同一米尺并排（虚线圆 = 直线半径理想圈，实线 = 真实路网 15 分钟环） */
+function IsoPanel({ s }: { s: IsoSample }) {
+  const W = 236, H = 210, R = 78; // px：理想半径在面板中的像素半径（三图同尺）
+  const cx = W / 2, cy = H / 2 - 10;
+  const k = R / ISO_IDEAL_RADIUS_M;
+  const d = s.pts.map(([x, y], i) => `${i ? 'L' : 'M'}${(cx + x * k).toFixed(1)},${(cy - y * k).toFixed(1)}`).join(' ') + ' Z';
+  return (
+    <div style={{ flex: '1 1 220px', maxWidth: 260, border: '1px solid var(--line)', borderRadius: 10, padding: 8 }}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', display: 'block' }} role="img" aria-label={`${s.label} 等时圈`}>
+        <circle cx={cx} cy={cy} r={R} fill="none" stroke="#b0b7c6" strokeDasharray="5 4" strokeWidth="1.2" />
+        <path d={d} fill="rgba(77,144,255,0.14)" stroke="#4d90ff" strokeWidth="2" strokeLinejoin="round" />
+        <circle cx={cx} cy={cy} r={3.5} fill="#d94f4f" />
+        <text x={cx} y={cy + R + 14} textAnchor="middle" fontSize="10" fill="#8a94a8">虚线=直线理想圈 r=1200m</text>
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', padding: '0 2px' }}>
+        <b style={{ fontSize: 13 }}>{s.label}</b>
+        <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{s.grade}/{s.score} · {s.cumulative}处/{s.cats}类</span>
+      </div>
+    </div>
+  );
+}
 
 type StepRow = { name: string; channel: string; ms: number; cacheHit: boolean; note?: string };
 
@@ -102,6 +125,14 @@ export function ProofPanel({ r }: { r: AnalysisResult | null }) {
       <div className="log-line">
         全量口径与人工核对过程：<Typography.Link href={blob('docs/COMPARISON_TEST.md')} target="_blank" rel="noreferrer">docs/COMPARISON_TEST.md</Typography.Link>
         {' '}｜在线演示可复现：<Typography.Link href="https://wookat.github.io/life-circle-web/" target="_blank" rel="noreferrer">wookat.github.io/life-circle-web</Typography.Link>
+      </div>
+
+      <div className="empty-title" style={{ marginTop: 18 }}>等时圈形态 · 三样例同尺对比（真实路网 ≠ 直线半径）</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 8 }}>
+        {ISO_SAMPLES.map((s) => <IsoPanel key={s.id} s={s} />)}
+      </div>
+      <div className="log-line" style={{ marginTop: 6 }}>
+        同一成人 15 分钟口径：老城核心环饱满、在建新校区狭长偏置、高校封闭校区被围墙切割——面积与朝向差异全部来自真实路网算路，非直线缓冲。
       </div>
 
       <div className="empty-title" style={{ marginTop: 18 }}>工程门禁</div>
