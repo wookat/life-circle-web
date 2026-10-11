@@ -13,6 +13,8 @@ export const BATCH_ROWS: {
   { batch: '2026-10-11', site: '样例 A · 师大数字产业学院（新校区）', persona: '老年人', grade: '26 / E', opportunity: '2 处 / 1 类', mae: '9.30 分钟（31.4%）', note: '可达圈显著收缩' },
   { batch: '2026-10-11', site: '样例 B · 信州区中心广场（老城）', persona: '成人', grade: '76 / B', opportunity: '43 处 / 8 类', mae: '3.89 分钟（23.7%）', note: 'WorldPop 回退口径实测 51% 人口覆盖' },
   { batch: '2026-10-11', site: '样例 B · 信州区中心广场（老城）', persona: '老年人', grade: '76 / B', opportunity: '15 处 / 7 类', mae: '8.56 分钟（21.8%）', note: '同点人群差异直接可见' },
+  { batch: '2026-10-11', site: '样例 C · 上饶师范学院（高校本部）', persona: '成人', grade: '70 / C', opportunity: '14 处 / 5 类', mae: '4.63 分钟（18.3%）', note: '检索 210 处但围墙绕行，可达仅 14 处——「检索得到≠走得着」' },
+  { batch: '2026-10-11', site: '样例 C · 上饶师范学院（高校本部）', persona: '老年人', grade: '70 / C', opportunity: '2 处 / 2 类', mae: '6.70 分钟（39.4%）', note: '老年断崖：医疗三类圈内均不可达，灰斑 2→1' },
 ];
 
 /** 工程门禁：与本仓库 CI（.github/workflows/ci.yml）同一批命令 */
