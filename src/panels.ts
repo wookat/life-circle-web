@@ -94,6 +94,23 @@ export function getWorkbenchState() {
   };
 }
 
+// ---- React 接管桥 ----
+// 已迁到 React+AntD 的页签登记在 window.__lcReactTabs；本模块对其跳过 innerHTML 渲染，
+// 改为广播 lc:panel 事件，由 React 侧读 getPanelView() 并渲染进 #panel-react。
+const reactTabs = ((window as unknown as { __lcReactTabs?: Set<string> }).__lcReactTabs ??= new Set<string>());
+const reactHandles = (t: string) => reactTabs.has(t);
+
+export function getPanelView() {
+  return {
+    tab: currentTab,
+    result: currentResult,
+    correctionsCount: listCorrections().length,
+    workbench: {
+      acceptedSites, rejectedSites, scenarios, customCandidates, noGoZones, budget
+    }
+  };
+}
+
 export function switchTab(tab: string) {
   currentTab = tab;
   document.querySelectorAll('#panel-tabs button').forEach((b) => {
@@ -104,10 +121,11 @@ export function switchTab(tab: string) {
 }
 
 export function render() {
+  const legacy = document.getElementById('panel-legacy') ?? document.getElementById('panel-body')!;
   const body = document.getElementById('panel-body')!;
   const footer = document.getElementById('panel-footer')!;
   if (!currentResult && currentTab !== 'street') {
-    body.innerHTML = `
+    legacy.innerHTML = reactHandles(currentTab) ? '' : `
     <div class="empty-tip">
       <div class="empty-title">三步完成一次生活圈体检</div>
       <ol>
@@ -117,25 +135,28 @@ export function render() {
       </ol>
     </div>`;
     footer.classList.add('hidden');
+    window.dispatchEvent(new CustomEvent('lc:panel'));
     return;
   }
   footer.classList.toggle('hidden', !['report', 'compare'].includes(currentTab) || !currentResult);
   const r = currentResult;
-  switch (currentTab) {
+  if (reactHandles(currentTab)) {
+    legacy.innerHTML = '';
+  } else switch (currentTab) {
     case 'report':
-      if (!r) { body.innerHTML = '<div class="empty-tip">先完成一次体检</div>'; break; }
+      if (!r) { legacy.innerHTML = '<div class="empty-tip">先完成一次体检</div>'; break; }
       const corr = listCorrections();
-      body.innerHTML = reportHtml(r) + (corr.length
+      legacy.innerHTML = reportHtml(r) + (corr.length
         ? `<div class="rpt-sub" style="margin-top:8px">现场纠错标注 ${corr.length} 条（如已核验/停业/迁移/分类错误）。<b>口径说明：人工标注仅作现场记录，未计入评分与统计</b>——避免单人主观修改统计口径；可在地图设施弹窗撤销，导出 JSON 随附全部记录。</div>`
         : '');
       animateGrade(r.score.total); renderCharts(r);
       break;
-    case 'checklist': if (r) body.innerHTML = checklistHtml(r); break;
-    case 'gaps': if (r) { body.innerHTML = gapsHtml(r) + supplementsHtml(r) + boundaryHtml(); wireSupplements(); wireBoundary(); } break;
-    case 'plan': body.innerHTML = r ? planHtml(r) : '<div class="empty-tip">先完成一次体检</div>'; wirePlanActions(); break;
-    case 'compare': if (r) { body.innerHTML = compareHtml(r); wireComparison(); } break;
-    case 'street': body.innerHTML = streetHtml(); wireStreet(); break;
-    case 'log': if (r) body.innerHTML = logHtml(r); break;
+    case 'checklist': if (r) legacy.innerHTML = checklistHtml(r); break;
+    case 'gaps': if (r) { legacy.innerHTML = gapsHtml(r) + supplementsHtml(r) + boundaryHtml(); wireSupplements(); wireBoundary(); } break;
+    case 'plan': legacy.innerHTML = r ? planHtml(r) : '<div class="empty-tip">先完成一次体检</div>'; wirePlanActions(); break;
+    case 'compare': if (r) { legacy.innerHTML = compareHtml(r); wireComparison(); } break;
+    case 'street': legacy.innerHTML = streetHtml(); wireStreet(); break;
+    case 'log': if (r) legacy.innerHTML = logHtml(r); break;
   }
   // Delegate to the stable container: polling replaces street-result buttons later.
   body.onclick = (event) => {
@@ -144,6 +165,7 @@ export function render() {
     const [lat, lng] = (el.dataset.fly ?? '').split(',').map(Number);
     if (Number.isFinite(lat) && Number.isFinite(lng)) map.flyTo({ lat, lng });
   };
+  window.dispatchEvent(new CustomEvent('lc:panel'));
 }
 
 /** 评分数字滚动动画（尊重系统减少动效偏好） */
@@ -169,7 +191,7 @@ function gradeColor(grade: string): string {
   return { A: '#2f9e44', B: '#74b816', C: '#f08c00', D: '#e8590c', E: '#e03131' }[grade] ?? '#666';
 }
 
-function sameRules(r: AnalysisResult): boolean {
+export function sameRules(r: AnalysisResult): boolean {
   return !!r.provenance && (r.provenance.applicationVersion === APPLICATION_VERSION && r.provenance.ruleVersion === RULE_VERSION &&
     r.provenance.algorithmVersion === ALGORITHM_VERSION && r.provenance.ruleFingerprint === ruleFingerprint());
 }

@@ -3,6 +3,7 @@ import { Button, Checkbox, Input, Modal, Segmented, Tabs } from 'antd';
 import { AimOutlined, EnvironmentOutlined, FileTextOutlined, QuestionCircleOutlined, SearchOutlined, ShareAltOutlined } from '@ant-design/icons';
 import { banner } from '../hud.js';
 import { render as renderPanel } from '../panels.js';
+import { PanelBody } from './PanelBody.js';
 import { init, ui } from './controller.js';
 
 const TABS = [
@@ -146,11 +147,13 @@ export default function App() {
         </div>
 
         <section id="panel">
+          <PanelBody />
           <nav id="panel-tabs">
             <Tabs activeKey={activeTab} size="small" onChange={(k) => { setActiveTab(k); ui.selectTab(k); }} items={TABS} />
           </nav>
           <div id="panel-body">
-            <div className="empty-tip">选择中心点后点击「开始体检」</div>
+            <div id="panel-legacy"><div className="empty-tip">选择中心点后点击「开始体检」</div></div>
+            <div id="panel-react" />
           </div>
           <div id="panel-footer" className="hidden">
             <Button id="btn-print" className="btn ghost" onClick={() => ui.print()}>完整报告 / PDF</Button>
