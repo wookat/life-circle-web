@@ -7,6 +7,7 @@ import { PlanPanel } from './panels/PlanPanel.js';
 import { ComparePanel } from './panels/ComparePanel.js';
 import { StreetPanel } from './panels/StreetPanel.js';
 import { LogPanel } from './panels/LogPanel.js';
+import { ProofPanel } from './panels/ProofPanel.js';
 
 type PanelView = ReturnType<typeof getPanelView>;
 
@@ -28,6 +29,7 @@ export function PanelBody() {
       {view.tab === 'compare' && <ComparePanel r={view.result} />}
       {view.tab === 'street' && <StreetPanel />}
       {view.tab === 'log' && <LogPanel r={view.result} />}
+      {view.tab === 'proof' && <ProofPanel r={view.result} />}
     </>
   );
 }

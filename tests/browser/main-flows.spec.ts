@@ -500,3 +500,22 @@ test('老年口径报告含老年友好解读与口径边界说明', async ({ pa
   await expect(page.locator('#panel-body')).toContainText('无障碍能力需实地核验');
 });
 
+
+
+test('工程自证页：本次运行证据、实测批次、门禁清单与细则对照可见', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#btn-analyze').click();
+  await expect(page.locator('#btn-analyze')).toBeEnabled({ timeout: 60_000 });
+  await page.locator('[data-tab="proof"]').click();
+  const body = page.locator('#panel-body');
+  await expect(body).toContainText('本次运行证据');
+  await expect(body).toContainText('调用步骤');
+  await expect(body).toContainText('中心定位');
+  await expect(body).toContainText('实测跑批记录');
+  await expect(body).toContainText('2026-10-11');
+  await expect(body).toContainText('工程门禁');
+  await expect(body).toContainText('docker compose up --build');
+  await expect(body).toContainText('评审细则');
+  await expect(body).toContainText('空间插值');
+  await expect(body).toContainText('docs/COMPARISON_TEST.md');
+});

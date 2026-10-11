@@ -15,7 +15,8 @@ const TABS = [
   { key: 'plan', label: '规划', title: '规划建议' },
   { key: 'compare', label: '对比', title: '方案对比' },
   { key: 'street', label: '街道', title: '街道体检' },
-  { key: 'log', label: '日志', title: '运行日志' }
+  { key: 'log', label: '日志', title: '运行日志' },
+  { key: 'proof', label: '自证', title: '工程自证' }
 ].map((t) => ({ ...t, label: <span data-tab={t.key} title={t.title}>{t.label}</span> }));
 
 export default function App() {

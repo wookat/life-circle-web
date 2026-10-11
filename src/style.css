@@ -384,6 +384,9 @@ body.sb-off #sidebar, body.panel-off #panel { display: none; }
 }
 @media (max-width: 720px) {
   #topbar { padding: 0 10px; gap: 8px; }
+  /* 窄屏页签：8 个页签全部可见，不收进 antd「···」溢出菜单 */
+  #panel-tabs .ant-tabs-tab { padding: 8px 0; }
+  #panel-tabs .ant-tabs-tab + .ant-tabs-tab { margin-left: 14px; }
   .brand span.app-name { display: none; }
   #addr-input { width: 130px; }
   .hud-box { width: min(340px, 92vw); }
