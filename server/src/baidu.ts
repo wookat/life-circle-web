@@ -4,10 +4,11 @@ import { countUpstream, overBudget } from './usage.js';
 const BASE = 'https://api.map.baidu.com';
 
 /** 上游服务维度的限流桶（个人 AK 并发/QPS 上限约 2-3，取保守值） */
+// 企业配额 QPS 上限 30；5 QPS 为保守值（原 2 是个人 AK 时代的遗留）
 export const buckets = {
-  place: new TokenBucket(2, 2),
-  route: new TokenBucket(2, 2),
-  geo: new TokenBucket(2, 2)
+  place: new TokenBucket(5, 5),
+  route: new TokenBucket(5, 5),
+  geo: new TokenBucket(5, 5)
 };
 
 export interface BaiduCallResult {

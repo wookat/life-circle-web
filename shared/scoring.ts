@@ -123,7 +123,12 @@ export function computeScore(
   }
   if (coverageAvailable && gap.severeShare != null && gap.severeShare > 0.05)
     summaryParts.push(`重度缺失（三类全无）居住权重占 ${(gap.severeShare * 100).toFixed(0)}%`);
-  if (gap.totalWeight === 0) summaryParts.push('片区内未检索到住宅小区，人口覆盖率无法评估');
+  if (gap.totalWeight === 0) {
+    const resCount = pois.filter((p) => p.category === 'residential').length;
+    summaryParts.push(resCount
+      ? `住宅小区已取得 ${resCount} 处但检索不完整（达到分页上限），人口覆盖率无法评估`
+      : '片区内未检索到住宅小区，人口覆盖率无法评估');
+  }
   if (!summaryParts.length) summaryParts.push('各类设施齐备，暂无明显服务盲区');
   summaryParts.unshift(
     `最薄弱维度：${weak ? CATEGORY_MAP[weak.category].name + '（完整度 ' + Math.round(weak.completeness * 100) + '%）' : '—'}`

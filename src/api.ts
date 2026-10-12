@@ -40,7 +40,7 @@ export interface Gateway {
   /** 逆地理编码：坐标 → 地名描述 */
   reverseGeocode(p: LatLng): Promise<string>;
   searchPoi(params: PoiSearchParams): Promise<Poi[]>;
-  searchPoiDetailed?(params: PoiSearchParams, category: CategoryId): Promise<PoiSearchResult>;
+  searchPoiDetailed?(params: PoiSearchParams, category: CategoryId, onPage?: (info: { keyword: string; page: number; fetched: number; budget: number }) => void): Promise<PoiSearchResult>;
   routeMatrix(origin: LatLng, dests: LatLng[]): Promise<(RouteProbe | null)[]>;
   walkingRoute(origin: LatLng, dest: LatLng): Promise<RouteProbe | null>;
   /** 返回一条步行路线的分段描述文本（用于过街设施文本扫描） */
@@ -142,9 +142,9 @@ export class ServerGateway implements Gateway {
     return (r.results ?? []).map((it: any) => this.mapPoi(it, params.query));
   }
 
-  searchPoiDetailed(params: PoiSearchParams, category: CategoryId): Promise<PoiSearchResult> {
-    return searchPoiPages({ keyword: params.query, category, source: this.name, fetchPage: async (page) => {
-      if (page > 0) await new Promise((resolve) => setTimeout(resolve, 450));
+  searchPoiDetailed(params: PoiSearchParams, category: CategoryId, onPage?: (info: { keyword: string; page: number; fetched: number; budget: number }) => void): Promise<PoiSearchResult> {
+    return searchPoiPages({ keyword: params.query, category, source: this.name, onPage, fetchPage: async (page) => {
+      if (page > 0) await new Promise((resolve) => setTimeout(resolve, 120)); // 企业配额 QPS 充裕；客户端另有令牌桶兜底
       const query = new URLSearchParams({ query: params.query,
         location: `${params.location.lat},${params.location.lng}`,
         radius: String(params.radiusM), page_num: String(page) });
@@ -286,9 +286,9 @@ export class ClientGateway implements Gateway {
     return await this.jsonpSearchPoi(params);
   }
 
-  searchPoiDetailed(params: PoiSearchParams, category: CategoryId): Promise<PoiSearchResult> {
+  searchPoiDetailed(params: PoiSearchParams, category: CategoryId, onPage?: (info: { keyword: string; page: number; fetched: number; budget: number }) => void): Promise<PoiSearchResult> {
     const sdkPage = window.BMapGL && window.__LC_MAP__ ? this.glPageFetcher(params, category) : null;
-    return searchPoiPages({ keyword: params.query, category, source: this.name, fetchPage: async (page) => {
+    return searchPoiPages({ keyword: params.query, category, source: this.name, onPage, fetchPage: async (page) => {
       if (page > 0) await new Promise((resolve) => setTimeout(resolve, 450));
       if (sdkPage) return sdkPage(page);
       const data = await this.jsonp('https://api.map.baidu.com/place/v2/search', {
@@ -577,7 +577,7 @@ export class MockGateway implements Gateway {
     );
   }
 
-  async searchPoiDetailed(params: PoiSearchParams, category: CategoryId): Promise<PoiSearchResult> {
+  async searchPoiDetailed(params: PoiSearchParams, category: CategoryId, onPage?: (info: { keyword: string; page: number; fetched: number; budget: number }) => void): Promise<PoiSearchResult> {
     const pois = (await this.searchPoi(params)).map((p) => ({ ...p, category }));
     const result = legacyPoiSearchResult(params.query, category, pois);
     result.completeness = { ...result.completeness, status: 'complete', reportedTotal: pois.length,
@@ -780,7 +780,7 @@ export class GatewayChain {
   }
 
   /** Keep one source per query; return quota status so the analysis stops the remaining batch. */
-  async searchPoiDetailed(params: PoiSearchParams, category: CategoryId): Promise<ChainResult<PoiSearchResult>> {
+  async searchPoiDetailed(params: PoiSearchParams, category: CategoryId, onPage?: (info: { keyword: string; page: number; fetched: number; budget: number }) => void): Promise<ChainResult<PoiSearchResult>> {
     const key = detailedSearchKey(params.query, params.location, params.radiusM, category, this.gateways.map((g) => g.name));
     const cached = getCachedSearch(key);
     if (cached) return { value: cached, channel: cached.completeness.source, ms: 0,
@@ -793,7 +793,7 @@ export class GatewayChain {
       let result: PoiSearchResult;
       try {
         result = gateway.searchPoiDetailed
-          ? await gateway.searchPoiDetailed(params, category)
+          ? await gateway.searchPoiDetailed(params, category, onPage)
           : legacyPoiSearchResult(params.query, category, await gateway.searchPoi(params));
       } catch (error) {
         result = { pois: [], completeness: unqueriedPoiSearch(params.query, category, gateway.name, 'failed', isPoiQuotaError(error)) };

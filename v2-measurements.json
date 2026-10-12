@@ -1,0 +1,101 @@
+{
+  "A-adult": {
+    "poiSearch": []
+  },
+  "A-elderly": {
+    "poiSearch": []
+  },
+  "B-urban": {
+    "poiSearch": []
+  },
+  "street": {
+    "status": "done",
+    "done": 9,
+    "total": 9,
+    "summary": {
+      "avgScore": 86.8,
+      "gradeDist": {
+        "A": 2,
+        "B": 7
+      },
+      "best": {
+        "name": "江西省上饶市信州区东市街道凤凰中大道辅路",
+        "street": "市信州区东市街道",
+        "center": {
+          "lat": 28.463591,
+          "lng": 117.980634
+        },
+        "score": 91,
+        "grade": "A",
+        "coverageShare": 1,
+        "coverageUnavailable": false,
+        "blindPoints": 0,
+        "patches": 0,
+        "dominantMissing": null,
+        "planTop": null,
+        "degraded": false
+      },
+      "worst": {
+        "name": "江西省上饶市信州区北门街道三清山东大道辅路",
+        "street": "市信州区北门街道",
+        "center": {
+          "lat": 28.468483,
+          "lng": 117.997831
+        },
+        "score": 78,
+        "grade": "B",
+        "coverageShare": 0.7114589486119315,
+        "coverageUnavailable": false,
+        "blindPoints": 834,
+        "patches": 1,
+        "dominantMissing": "market",
+        "planTop": "primarySchool",
+        "degraded": false
+      },
+      "scoreGap": 13,
+      "weakList": [
+        {
+          "name": "江西省上饶市信州区北门街道三清山东大道辅路",
+          "score": 78,
+          "coverageShare": 0.7114589486119315,
+          "dominantMissing": "market"
+        },
+        {
+          "name": "江西省上饶市信州区东市街道青阳路",
+          "score": 83,
+          "coverageShare": 0.7870606214977076,
+          "dominantMissing": "market"
+        }
+      ],
+      "streetGroups": [
+        {
+          "street": "市信州区东市街道",
+          "count": 7,
+          "avgScore": 88.1,
+          "weakCount": 1,
+          "bestName": "江西省上饶市信州区东市街道凤凰中大道辅路",
+          "bestScore": 91,
+          "worstName": "江西省上饶市信州区东市街道青阳路",
+          "worstScore": 83
+        },
+        {
+          "street": "市信州区北门街道",
+          "count": 2,
+          "avgScore": 82,
+          "weakCount": 1,
+          "bestName": "江西省上饶市信州区北门街道G320辅路",
+          "bestScore": 86,
+          "worstName": "江西省上饶市信州区北门街道三清山东大道辅路",
+          "worstScore": 78
+        }
+      ]
+    }
+  },
+  "district": {
+    "status": "error",
+    "done": 0,
+    "total": 14,
+    "summary": null,
+    "persona": "adult"
+  }
+}

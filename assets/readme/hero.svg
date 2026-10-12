@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="340" viewBox="0 0 1200 340" role="img" aria-labelledby="heroTitle heroDesc">
+  <title id="heroTitle">15 分钟生活圈 · 智能体检与规划助手</title>
+  <desc id="heroDesc">基于百度地图开放能力：输入中心点，计算真实路网 15 分钟步行等时圈，渲染步行时间热力面，识别人口加权盲区，给出补点选址建议。</desc>
+
+  <defs>
+    <radialGradient id="heatRed" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#e53935" stop-opacity="0.42"/>
+      <stop offset="100%" stop-color="#e53935" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="heatOrange" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fb8c00" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#fb8c00" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="heatYellow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fbc02d" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#fbc02d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="heatGreen" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#66bb6a" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#66bb6a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="340" rx="26" fill="#0d1526"/>
+
+  <g id="title-block" transform="translate(64 52)">
+    <text x="0" y="0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" font-size="18" fill="#7f92b8" letter-spacing="2">百度地图开放能力 · 开源 AI 工具赛道</text>
+    <text x="0" y="66" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" font-size="56" font-weight="700" fill="#ffffff">15 分钟生活圈</text>
+    <text x="0" y="114" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" font-size="30" font-weight="600" fill="#5b9bff">智能体检与规划助手</text>
+    <text x="0" y="164" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" font-size="21" fill="#a9b7d6">输入一个中心点，基于真实路网计算 15 分钟步行可达范围，</text>
+    <text x="0" y="194" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" font-size="21" fill="#a9b7d6">生成连续步行时间热力面，识别人口加权盲区，给出补点选址建议。</text>
+    <text x="0" y="246" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="18" fill="#7f92b8">TypeScript · Vite · Node.js · Baidu GL JS API · MIT</text>
+  </g>
+
+  <g id="project-proof" transform="translate(700 40)">
+    <rect width="440" height="260" rx="18" fill="#101d3a" stroke="#24365e" stroke-width="1.5"/>
+
+    <g id="heat-field">
+      <circle cx="210" cy="122" r="150" fill="url(#heatRed)"/>
+      <circle cx="210" cy="122" r="112" fill="url(#heatOrange)"/>
+      <circle cx="210" cy="122" r="76" fill="url(#heatYellow)"/>
+      <circle cx="210" cy="122" r="46" fill="url(#heatGreen)"/>
+    </g>
+
+    <g id="gap-patch">
+      <ellipse cx="86" cy="202" rx="54" ry="30" fill="#c62828" fill-opacity="0.16" stroke="#e57373" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="86" y="184" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="18" fill="#ef9a9a">盲区</text>
+    </g>
+
+    <g id="isochrone-rings" fill="none">
+      <circle cx="210" cy="122" r="122" stroke="#e53935" stroke-width="3"/>
+      <circle cx="210" cy="122" r="86" stroke="#fb8c00" stroke-width="2.5" stroke-dasharray="9 6"/>
+      <circle cx="210" cy="122" r="52" stroke="#9ccc65" stroke-width="2.5" stroke-dasharray="6 5"/>
+    </g>
+
+    <g id="poi-dots">
+      <circle cx="130" cy="80" r="4.5" fill="#43a047"/>
+      <circle cx="286" cy="66" r="4.5" fill="#8e24aa"/>
+      <circle cx="322" cy="118" r="4.5" fill="#fdd835"/>
+      <circle cx="300" cy="180" r="4.5" fill="#1e88e5"/>
+      <circle cx="252" cy="212" r="4.5" fill="#43a047"/>
+      <circle cx="160" cy="168" r="4.5" fill="#8e24aa"/>
+      <circle cx="94" cy="120" r="4.5" fill="#fdd835"/>
+      <circle cx="352" cy="66" r="4.5" fill="#1e88e5"/>
+      <circle cx="248" cy="42" r="4.5" fill="#43a047"/>
+      <circle cx="128" cy="146" r="4.5" fill="#1e88e5"/>
+      <circle cx="332" cy="212" r="4.5" fill="#8e24aa"/>
+      <circle cx="176" cy="236" r="4.5" fill="#fdd835"/>
+    </g>
+
+    <g id="center-marker">
+      <circle cx="210" cy="122" r="13" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="4 3"/>
+      <circle cx="210" cy="122" r="5.5" fill="#ffffff"/>
+    </g>
+
+    <g id="ring-legend" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="18" fill="#a9b7d6">
+      <line x1="28" y1="244" x2="52" y2="244" stroke="#9ccc65" stroke-width="2.5" stroke-dasharray="6 5"/>
+      <text x="60" y="250">5′</text>
+      <line x1="104" y1="244" x2="128" y2="244" stroke="#fb8c00" stroke-width="2.5" stroke-dasharray="9 6"/>
+      <text x="136" y="250">10′</text>
+      <line x1="186" y1="244" x2="210" y2="244" stroke="#e53935" stroke-width="3"/>
+      <text x="218" y="250">15′</text>
+      <text x="286" y="250" fill="#7f92b8" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16">120m 网格</text>
+    </g>
+  </g>
+</svg>

@@ -110,18 +110,6 @@ export interface AnalysisReport {
   incomplete: boolean;
   /** true = 检索因上游配额耗尽被截断（incomplete 必为 true） */
   quotaExhausted: boolean;
-  /**
-   * 人口覆盖率（WorldPop 2020 栅格兜底口径）：住宅 POI 口径判「无法评估」时
-   * 由服务端回源估算（等时圈常住人口 / 理想步行圈 speed×minutes 常住人口），
-   * 只作展示参考不与住宅口径混用；null/缺省 = 该口径亦不可用。
-   */
-  popCoverage?: {
-    share: number;
-    popIn: number;
-    popEval: number;
-    radiusM: number;
-    source: 'worldpop-2020';
-  } | null;
   steps: AnalysisStep[];
 }
 
@@ -325,7 +313,8 @@ export async function runAnalysis(
     probeStraightM: probeM,
     failedCategories,
     totalWeight: gap.totalWeight,
-    poiOk
+    poiOk,
+    residentialCount: cleaned.filter((p) => p.category === 'residential').length
   });
   if (quotaExhausted) {
     warnings.unshift('上游配额耗尽，部分或全部检索中止：本报告为不完整结果');

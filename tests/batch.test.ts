@@ -27,8 +27,11 @@ function provider(mode: Mode): AnalysisProvider {
       return searchPoiPages({ keyword, category, source: 'server', fetchPage: async page => {
         if (mode === 'quota') throw Object.assign(new Error('受控配额耗尽'), { status: 302 });
         if (mode === 'empty') return { pois: [], reportedTotal: 0 };
-        if (mode === 'dense' && ['supermarket', 'residential'].includes(category)) {
-          return { pois: Array.from({ length: 20 }, (_, i) => poi(keyword, category, page * 20 + i)), reportedTotal: 100 };
+        if (mode === 'dense' && category === 'supermarket') {
+          return { pois: Array.from({ length: 20 }, (_, i) => poi(keyword, category, page * 20 + i)), reportedTotal: 120 }; // 5 页取 100 < 120 → 截断
+        }
+        if (mode === 'dense' && category === 'residential') {
+          return { pois: Array.from({ length: 20 }, (_, i) => poi(keyword, category, page * 20 + i)), reportedTotal: 250 }; // 住宅 10 页取 200 < 250 → 截断
         }
         return { pois: [poi(keyword, category)], reportedTotal: 1 };
       } });

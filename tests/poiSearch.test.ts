@@ -32,13 +32,13 @@ describe('设施检索的有限分页与完整性', () => {
       reportedTotal: 22, cacheHit: true, collectedAt: '2026-10-09T01:00:00.000Z' });
   });
 
-  it('总数大于三页预算时标为截断，不以60条冒充完整数据', async () => {
+  it('总数大于五页预算时标为截断，不以100条冒充完整数据', async () => {
     const pages: number[] = [];
     const r = await searchPoiPages({ keyword: '药店', category: 'pharmacy', source: 'server', pageLimit: 999,
-      fetchPage: async (page) => { pages.push(page); return { pois: rows(page * 20, 20), reportedTotal: 83 }; }
+      fetchPage: async (page) => { pages.push(page); return { pois: rows(page * 20, 20), reportedTotal: 108 }; }
     });
-    expect(pages).toEqual([0, 1, 2]);
-    expect(r.completeness).toMatchObject({ status: 'truncated', reportedTotal: 83, fetchedCount: 60, pageLimit: 3 });
+    expect(pages).toEqual([0, 1, 2, 3, 4]);
+    expect(r.completeness).toMatchObject({ status: 'truncated', reportedTotal: 108, fetchedCount: 100, pageLimit: 5 });
     expect(assessmentUnavailableCategories([], [r.completeness])).toEqual(['pharmacy']);
   });
 

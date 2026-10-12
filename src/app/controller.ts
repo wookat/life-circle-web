@@ -819,7 +819,8 @@ async function searchAllCategories(
         continue;
       }
       try {
-        const r = await chain.searchPoiDetailed({ query: t.kw, location: state.center, radiusM: THRESHOLDS.searchRadiusM }, t.cat.id);
+        const r = await chain.searchPoiDetailed({ query: t.kw, location: state.center, radiusM: THRESHOLDS.searchRadiusM }, t.cat.id,
+          (info) => onNote(`POI 检索 ${done + 1}：${t.kw} 第 ${info.page + 1}/${info.budget} 页 · 已取 ${info.fetched} 条…`));
         for (const p of r.value.pois) out.push({ ...p, category: t.cat.id });
         poiSearch.push(r.value.completeness);
         quotaExhausted ||= r.value.completeness.quotaExhausted;

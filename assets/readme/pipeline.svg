@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="330" viewBox="0 0 1200 330" role="img" aria-labelledby="pipeTitle pipeDesc">
+  <title id="pipeTitle">分析流水线与三级通道降级</title>
+  <desc id="pipeDesc">五个分析步骤：中心定位、扇形采样批量算路、时间场插值、盲区识别与评分、贪心最大覆盖选址；三级数据通道依次降级：服务端代理、浏览器直连、合成兜底。</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#41598c"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="330" rx="26" fill="#0d1526"/>
+
+  <g id="pipeline-steps" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+    <g transform="translate(64 64)">
+      <rect width="200" height="96" rx="12" fill="#14203c" stroke="#263a63" stroke-width="1.5"/>
+      <circle cx="26" cy="27" r="14" fill="#2f6fed"/>
+      <text x="26" y="33" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">1</text>
+      <text x="50" y="34" font-size="20" font-weight="600" fill="#ffffff">中心定位</text>
+      <text x="20" y="74" font-size="18" fill="#8ba0c9">地理编码 / 图上选点</text>
+    </g>
+    <line x1="264" y1="112" x2="296" y2="112" stroke="#41598c" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <g transform="translate(299 64)">
+      <rect width="200" height="96" rx="12" fill="#14203c" stroke="#263a63" stroke-width="1.5"/>
+      <circle cx="26" cy="27" r="14" fill="#2f6fed"/>
+      <text x="26" y="33" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">2</text>
+      <text x="50" y="34" font-size="20" font-weight="600" fill="#ffffff">扇形采样算路</text>
+      <text x="20" y="74" font-size="18" fill="#8ba0c9">批量距离矩阵</text>
+    </g>
+    <line x1="499" y1="112" x2="531" y2="112" stroke="#41598c" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <g transform="translate(534 64)">
+      <rect width="200" height="96" rx="12" fill="#14203c" stroke="#263a63" stroke-width="1.5"/>
+      <circle cx="26" cy="27" r="14" fill="#2f6fed"/>
+      <text x="26" y="33" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">3</text>
+      <text x="50" y="34" font-size="20" font-weight="600" fill="#ffffff">时间场插值</text>
+      <text x="20" y="74" font-size="18" fill="#8ba0c9">120m 网格 · 等时环</text>
+    </g>
+    <line x1="734" y1="112" x2="766" y2="112" stroke="#41598c" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <g transform="translate(769 64)">
+      <rect width="200" height="96" rx="12" fill="#14203c" stroke="#263a63" stroke-width="1.5"/>
+      <circle cx="26" cy="27" r="14" fill="#2f6fed"/>
+      <text x="26" y="33" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">4</text>
+      <text x="50" y="34" font-size="20" font-weight="600" fill="#ffffff">盲区识别评分</text>
+      <text x="20" y="74" font-size="18" fill="#8ba0c9">人口加权 · 四维</text>
+    </g>
+    <line x1="969" y1="112" x2="1001" y2="112" stroke="#41598c" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <g transform="translate(1004 64)">
+      <rect width="200" height="96" rx="12" fill="#14203c" stroke="#263a63" stroke-width="1.5"/>
+      <circle cx="26" cy="27" r="14" fill="#2f6fed"/>
+      <text x="26" y="33" text-anchor="middle" font-size="18" font-weight="700" fill="#ffffff">5</text>
+      <text x="50" y="34" font-size="20" font-weight="600" fill="#ffffff">贪心选址</text>
+      <text x="20" y="74" font-size="18" fill="#8ba0c9">最大覆盖 · 收益量化</text>
+    </g>
+  </g>
+
+  <g id="channel-fallback" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+    <text x="64" y="228" font-size="20" font-weight="600" fill="#ffffff">三级通道降级</text>
+    <text x="196" y="228" font-size="18" fill="#8ba0c9">配额耗尽，演示不中断</text>
+
+    <rect x="64" y="248" width="320" height="46" rx="23" fill="#14203c" stroke="#2f6fed" stroke-width="1.5"/>
+    <text x="224" y="277" text-anchor="middle" font-size="18" fill="#c9d6ee">① 服务端代理 · AK 不出后端</text>
+    <line x1="384" y1="271" x2="416" y2="271" stroke="#41598c" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <rect x="420" y="248" width="320" height="46" rx="23" fill="#14203c" stroke="#263a63" stroke-width="1.5"/>
+    <text x="580" y="277" text-anchor="middle" font-size="18" fill="#c9d6ee">② 浏览器直连 · GL SDK</text>
+    <line x1="740" y1="271" x2="772" y2="271" stroke="#41598c" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <rect x="776" y="248" width="360" height="46" rx="23" fill="#14203c" stroke="#263a63" stroke-width="1.5"/>
+    <text x="956" y="277" text-anchor="middle" font-size="18" fill="#c9d6ee">③ 合成兜底 · 确定性演示数据</text>
+
+    <text x="64" y="318" font-size="18" fill="#7f92b8" font-family="ui-monospace,SFMono-Regular,Menlo,monospace">通道独立熔断：连续失败 60s · 配额类错误 30min</text>
+  </g>
+</svg>

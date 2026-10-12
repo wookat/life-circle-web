@@ -7,11 +7,6 @@ import { buckets, callBaidu } from './baidu.js';
 import { analyzeWithServerProvider } from './provider.js';
 import { startStreetBatch, getJob, cancelJob, sweepJobs, listJobs, resumeStreetBatch } from './batch.js';
 import { escapeHtml as esc, getShare, saveShare } from './share.js';
-import { worldPopCoverage } from '../../shared/worldpop.js';
-import { PERSONAS } from '../../shared/config.js';
-import type { AnalysisReport } from '../../shared/analyze.js';
-import type { LatLng } from '../../shared/types.js';
-import { slimShareReport } from '../../shared/sharePayload.js';
 
 /**
  * 百度 Web API 代理：
@@ -195,9 +190,8 @@ export function createApiRouter(cfg: ServerConfig): Router {
   });
 
   // №18 只读分享：固定版本报告快照（无交互、无 AK；存储上限 100 份 FIFO）
-  router.post('/share', expressJson({ limit: '8mb' }), (req, res) => {
-    // 只存只读页渲染所需的字段子集——完整报告数 MB，瘦身快照恒在 KB 级
-    const text = JSON.stringify(slimShareReport(req.body ?? {}));
+  router.post('/share', expressJson({ limit: '400kb' }), (req, res) => {
+    const text = typeof req.body === 'string' ? req.body : JSON.stringify(req.body ?? {});
     const out = saveShare(text);
     if ('error' in out) {
       res.status(400).json({ status: -1, message: out.error });
@@ -258,29 +252,6 @@ export function createApiRouter(cfg: ServerConfig): Router {
 export function createAnalysisRouter(cfg: ServerConfig): Router {
   const router = Router();
 
-  /**
-   * 住宅 POI 口径判「无法评估」时回退 WorldPop 栅格口径：
-   * 取最外层等时圈（level=minutes）最长闭合线为覆盖多边形，
-   * 分母为理想步行半径 speed×minutes 的圆。估算失败保持 popCoverage 为空。
-   */
-  async function attachPopCoverage(report: AnalysisReport, personaId: string, minutes: number): Promise<void> {
-    if (!report?.gap?.coverageUnavailable) return;
-    const outer = report.rings?.[report.rings.length - 1]?.lines ?? [];
-    const ring: LatLng[] | undefined = outer.reduce<LatLng[] | undefined>(
-      (best, line) => (line.length > (best?.length ?? 0) ? line : best),
-      undefined
-    );
-    if (!ring || ring.length < 3) return;
-    const speed = PERSONAS.find((p) => p.id === personaId)?.speed ?? 80;
-    const est = await worldPopCoverage(report.center, ring, speed * minutes);
-    if (!est) return;
-    report.popCoverage = est;
-    report.warnings = [
-      ...(report.warnings ?? []),
-      `人口覆盖率改用 WorldPop 2020 年 100m 人口栅格口径估算：等时圈内常住人口约 ${Math.round(est.popIn).toLocaleString()} / 理想步行圈 ${est.radiusM}m 内约 ${Math.round(est.popEval).toLocaleString()}（住宅 POI 口径不可用，两口径不混用，四维评分仍按住宅口径剔除覆盖维度）`
-    ];
-  }
-
   // ================= 分析 API（面向多端 / 批量任务的地基） =================
 
   // POST /api/analyze  {lat?, lng?, address?, persona?, minutes?} → 完整体检报告 JSON
@@ -290,40 +261,17 @@ export function createAnalysisRouter(cfg: ServerConfig): Router {
       res.status(400).json({ status: -1, message: '需要提供 address 或 lat/lng' });
       return;
     }
-    const personaId = persona ?? 'adult';
-    const minutesN = Number(minutes) || 15;
     analyzeWithServerProvider(
       {
         center: typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : undefined,
         address: typeof address === 'string' && address ? address : undefined,
-        persona: personaId,
-        minutes: minutesN
+        persona: persona ?? 'adult',
+        minutes: Number(minutes) || 15
       },
       cfg.akServer
     )
-      .then(async (report) => {
-        await attachPopCoverage(report, personaId, minutesN);
-        res.json({ status: 0, report });
-      })
+      .then((report) => res.json({ status: 0, report }))
       .catch((err) => res.json({ status: -1, message: String(err?.message ?? err) }));
-  });
-
-  // POST /api/popcoverage  {center:{lat,lng}, ring:LatLng[], radiusM}
-  // 住宅 POI 口径无法评估时的 WorldPop 栅格兜底：等时圈常住人口 / 理想步行圈常住人口
-  router.post('/popcoverage', expressJson({ limit: '200kb' }), (req, res) => {
-    const { center, ring, radiusM } = req.body ?? {};
-    // ring 两种入参都收：{lat,lng} 对象数组（主路径）或 [lng,lat] 坐标对数组
-    const norm: LatLng[] = Array.isArray(ring)
-      ? ring.map((p: any) => Array.isArray(p) ? { lat: Number(p[1]), lng: Number(p[0]) } : { lat: Number(p?.lat), lng: Number(p?.lng) })
-          .filter((p: LatLng) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
-      : [];
-    if (!center || typeof center.lat !== 'number' || typeof center.lng !== 'number' || norm.length < 3) {
-      res.status(400).json({ status: -1, message: '需要 center 与至少 3 个顶点的等时圈 ring' });
-      return;
-    }
-    worldPopCoverage(center, norm, Math.max(200, Math.min(4000, Number(radiusM) || 1200)))
-      .then((r) => res.json({ status: 0, popCoverage: r }))
-      .catch(() => res.json({ status: 0, popCoverage: null }));
   });
 
   // POST /api/batch/street  {address|lat/lng, scope?, radiusM?, maxCommunities?} → {jobId}

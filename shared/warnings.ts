@@ -17,6 +17,8 @@ export interface WarningInputs {
   totalWeight: number;
   /** 设施检索是否至少有一类成功 */
   poiOk: boolean;
+  /** 已取到的住宅小区数（区分「真没有」与「取到了但检索截断被排除」） */
+  residentialCount?: number;
 }
 
 export function buildAnalysisWarnings(opts: WarningInputs): string[] {
@@ -41,7 +43,10 @@ export function buildAnalysisWarnings(opts: WarningInputs): string[] {
     warnings.push(`设施检索失败：${names.join('、')}——相关类别的数量与完整性结论缺失，未计入评分`);
   }
   if (opts.totalWeight === 0) {
-    warnings.push('片区内未检索到住宅小区：人口覆盖率与盲区权重结论无法评估');
+    // 用户反馈：60 个小区已取到却提示「未检索到」——需区分两种情形
+    warnings.push(opts.residentialCount
+      ? `住宅小区已取得 ${opts.residentialCount} 处，但检索不完整（达到分页上限，未覆盖上游全部结果）：为避免以部分样本冒充完整人口分母，人口覆盖率与盲区权重按「无法评估」处理`
+      : '片区内未检索到住宅小区：人口覆盖率与盲区权重结论无法评估');
   }
   if (!opts.poiOk) {
     warnings.push('设施检索全部失败：评分与盲区结论不可用');
